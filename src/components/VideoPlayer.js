@@ -49,12 +49,14 @@ const VideoPlayer = ({ onTimeUpdate, onSeek }) => {
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setTotalTime(videoRef.current.duration);
+      console.log(videoRef.current)
     }
   };
 
   // 清理函数
   useEffect(() => {
-    // setVideoUrl("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");  // FIXME: FOR DEBUG
+    setVideoUrl("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");  // FIXME: FOR DEBUG
+
 
     return () => {
       if (videoUrl) {
@@ -88,6 +90,7 @@ const VideoPlayer = ({ onTimeUpdate, onSeek }) => {
               <video
                 ref={videoRef}
                 src={videoUrl}
+                className="max-h-full"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 controls={true}
