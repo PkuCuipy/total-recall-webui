@@ -56,7 +56,21 @@ function App() {
     View3DCtx.fillStyle = "#FFF";
     View3DCtx.font = "20px Arial";
     View3DCtx.fillText("3D View Graph", 20, 45);
+  }, []);
 
+
+  /* Support Horizontal Scroll w/o Pressing Shift */
+  useEffect(() => {
+    let graphsDiv = document.getElementsByClassName("horizontal-scroll");
+    if (graphsDiv.length !== 1) {
+      alert("There should be only one horizontal-scroll div")
+    }
+    graphsDiv = graphsDiv[0];
+    graphsDiv.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const delta = e.deltaY;
+      graphsDiv.scrollLeft += delta;
+    });
   }, []);
 
 
@@ -96,7 +110,7 @@ function App() {
         </div>
 
         {/* Right Graphs (sharing the same scroll bar) */}
-        <div className="flex-1 overflow-x-scroll no-scrollbar">
+        <div className="flex-1 overflow-x-scroll no-scrollbar horizontal-scroll">
           <div className="h-20">
             Events Graph
           </div>

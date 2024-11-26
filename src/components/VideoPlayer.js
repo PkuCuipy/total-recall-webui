@@ -90,7 +90,6 @@ const VideoPlayer = ({ onTimeUpdate, onSeek }) => {
               <video
                 ref={videoRef}
                 src={videoUrl}
-                className="max-h-full"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
                 controls={true}
