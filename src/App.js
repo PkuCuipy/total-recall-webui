@@ -59,7 +59,7 @@ function App() {
   }, []);
 
 
-  /* Support Horizontal Scroll w/o Pressing Shift */
+  /* Support Mouse Horizontal Scroll w/o Pressing Shift */
   useEffect(() => {
     let graphsDiv = document.getElementsByClassName("horizontal-scroll");
     if (graphsDiv.length !== 1) {
@@ -67,9 +67,10 @@ function App() {
     }
     graphsDiv = graphsDiv[0];
     graphsDiv.addEventListener("wheel", (e) => {
-      e.preventDefault();
       const delta = e.deltaY;
-      graphsDiv.scrollLeft += delta;
+      if (Math.abs(delta) >= 50) {    // a workaround to detect mouse or trackpad
+        graphsDiv.scrollLeft += delta;
+      }
     });
   }, []);
 
