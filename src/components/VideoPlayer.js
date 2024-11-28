@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 
-const VideoPlayer = ({ onTimeUpdate, onSeek }) => {
-  const [videoUrl, setVideoUrl] = useState(null);
+const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
@@ -49,21 +48,21 @@ const VideoPlayer = ({ onTimeUpdate, onSeek }) => {
   const handleLoadedMetadata = () => {
     if (videoRef.current) {
       setTotalTime(videoRef.current.duration);
+      console.log(videoRef.current.duration)
       console.log(videoRef.current)
     }
   };
 
   // 清理函数
   useEffect(() => {
-    setVideoUrl("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");  // FIXME: FOR DEBUG
-
-
+    // setVideoUrl("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");  // FIXME: FOR DEBUG
+    // setVideoUrl("https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm");  // FIXME: FOR DEBUG
     return () => {
       if (videoUrl) {
         URL.revokeObjectURL(videoUrl);
       }
     };
-  }, [videoUrl]);
+  }, [setVideoUrl, videoUrl]);
 
   return (
 
