@@ -11,13 +11,13 @@ const tensorWorkerCode = () => {
     const { type, data } = e.data;
 
     if (type === 'CONVERT_FRAMES') {
-      const { framesU1Array, mergeEvery, height, width, amp, power } = data;
+      const { framesU1Array, mergeEvery, height, width, amp, power, smooth } = data;
 
       const nrFramesFull = framesU1Array.length / (height * width);
       const nFrames = Math.floor(nrFramesFull / mergeEvery);
 
       //// Pipeline:
-      //// U1Array -> tf.Tensor -> MergedFrames -> Diffs -> Opacity Masks
+      //// U1Array -> tf.Tensor -> MergedFrames -> Diffs -> Opacity Masks -> Energies
 
       // U1Array -> tf.Tensor -> MergedFrames
       const frames = tf.tidy(() => {
@@ -39,36 +39,48 @@ const tensorWorkerCode = () => {
             frames.slice([0, 0, 0], [len-1, -1, -1])
           ], 0
         );
-        const diffs = tf.sub(frames, shiftRight)
-                        .abs()
-                        .pow(power);
+        const diffs = tf.sub(frames, shiftRight).abs().pow(power);
         const maxDiff = tf.max(diffs);
         return diffs.div(maxDiff).mul(amp).clipByValue(0, 1);
       });
 
+      // Masks -> Energies
+      const energies = tf.tidy(() => {
+        const raw = masks.sum([1, 2]);
+        console.log(raw);
+        const smoothKernel = tf.tensor3d(new Array(smooth).fill(1), [smooth, 1, 1]).div(smooth);
+        console.log('smoothKernel', smoothKernel);
+        const smoothen = raw.expandDims(1).conv1d(smoothKernel, 1, 'same').squeeze();
+        const max = tf.max(smoothen);
+        return smoothen.div(max);
+      });
+
       // Cast to typed arrays for data transfer
-      const [framesData, masksData] = await Promise.all([
+      const [framesData, masksData, energiesData] = await Promise.all([
         frames.data(),
         masks.data(),
+        energies.data(),
       ]);
 
       // Free up memory manually
       frames.dispose();
       masks.dispose();
+      energies.dispose();
 
       // Transfer data back to main thread
-      console.log('Tensors ready', framesData, masksData);
+      console.log('Tensors ready', framesData, masksData, energiesData);
       postMessage({
         type: 'TENSORS_READY',
         frames: framesData,
         masks: masksData,
+        energies: energiesData,
       });
     }
 
   };
 };
 
-const tensorWorkerBlob = new Blob([`(${tensorWorkerCode.toString()})()`], { type: 'application/javascript' });
-const tensorWorkerUrl = URL.createObjectURL(tensorWorkerBlob);
+const workerBlob = new Blob([`(${tensorWorkerCode.toString()})()`], { type: 'application/javascript' });
+const workerUrl = URL.createObjectURL(workerBlob);
 
-export default tensorWorkerUrl;
+export default workerUrl;

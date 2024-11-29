@@ -2,7 +2,7 @@ import './App.css';
 import VideoPlayer from './components/VideoPlayer';
 import EventsList from './components/EventsList';
 import {useEffect, useState, useRef} from "react";
-import timelineWorkerURL from "./workers/timelineWorker";
+import plottingWorkerURL from "./workers/plottingWorker";
 import tensorWorkerURL from "./workers/tensorWorker";
 
 import { FFmpeg } from '@ffmpeg/ffmpeg';
@@ -18,7 +18,7 @@ function App() {
   const framesU1ArrRef = useRef(null);
 
   const tensorWorkerRef = useRef(new Worker(tensorWorkerURL));
-  const timelineWorkerRef = useRef(new Worker(timelineWorkerURL));
+  const plottingWorkerRef = useRef(new Worker(plottingWorkerURL));
 
   const [resizedW, resizedH] = [80, 80];    // fixme: debug
   const frameSize = resizedH * resizedW;
@@ -62,60 +62,25 @@ function App() {
     return u1array;
   };
 
-  const createCanvasAndDraw = () => {
-    const drawOneFrame = (ctx, array, frameNum) => {
-      const getFrame = (array, frameNum) => {
-        const start = frameNum * frameSize;
-        return array.subarray(start, start + frameSize);
-      };
-      const frameData = getFrame(array, frameNum);
-      const imageData = new ImageData(resizedW, resizedH);
-      for (let i = 0; i < frameData.length; i++) {
-        const val = frameData[i];
-        const idx = i * 4;
-        imageData.data[idx] = val;     // R <-- Convert grayscale to RGBA
-        imageData.data[idx + 1] = val; // G
-        imageData.data[idx + 2] = val; // B
-        imageData.data[idx + 3] = 255; // A
-      }
-      ctx.putImageData(imageData, 0, 0);
-    };
-
-    const tensor = framesU1ArrRef.current;
-    const numFrames = tensor.length / frameSize;
-
-    const newCanvas = document.createElement('canvas');
-    newCanvas.width = resizedW;
-    newCanvas.height = resizedH;
-    const ctx = newCanvas.getContext('2d');
-    document.body.appendChild(newCanvas);
-
-    let frameIdx = 0;
-    setInterval(() => {
-      const frameNum = (frameIdx++) % numFrames;
-      drawOneFrame(ctx, tensor, frameNum);
-    }, 10);
-  }
 
   useEffect(() => {
     if (!ffmpegLoaded || !videoUrl) {
       return;
     }
     videoToU1Array(videoUrl)
-      .then((array) => {
-        console.log("Video to Uint8Array Done", array);
-
-        createCanvasAndDraw(array);
+      .then((u1arr) => {
+        console.log("Video to U1Array Done", u1arr);
 
         tensorWorkerRef.current.postMessage({
           type: 'CONVERT_FRAMES',
           data: {
-            framesU1Array: array,
-            mergeEvery: 4,
+            framesU1Array: u1arr,
+            mergeEvery: 3,
             height: resizedH,
             width: resizedW,
             amp: 3.0,
             power: 2,
+            smooth: 3,
           }
         });
       });
@@ -124,15 +89,15 @@ function App() {
   }, [ffmpegLoaded, videoUrl]);
 
 
-  // Web Workers
+  // Receive from Web Workers
   useEffect(() => {
 
     // TensorWorker
     tensorWorkerRef.current.onmessage = (e) => {
       console.log("[Main]: Received from TensorWorker", e.data);
 
-      timelineWorkerRef.current.postMessage({
-        type: 'MAKE_TIMELINE',
+      plottingWorkerRef.current.postMessage({
+        type: 'MAKE_3D_VIEW',
         data: {
           frames: e.data.frames,
           masks: e.data.masks,
@@ -140,29 +105,68 @@ function App() {
           width: resizedW,
         }
       });
+
+      plottingWorkerRef.current.postMessage({
+        type: 'MAKE_ENERGY_TIMELINE',
+        data: {
+          energies: e.data.energies,
+          height: resizedH,
+          width: resizedW,
+        }
+      });
     };
 
-    // TimelineWorker
-    timelineWorkerRef.current.onmessage = (e) => {
-      console.log("[Main]: Received from TimelineWorker", e.data);
 
-      const {timeline, height, width} = e.data.data;
+    // PlottingWorker
+    plottingWorkerRef.current.onmessage = (e) => {
 
-      const canvas = document.getElementById("3d-view-graph-canvas");
-      canvas.width = width;
-      const ctx = canvas.getContext("2d");
+      console.log("[Main]: Received from PlottingWorker");
+      console.log(e.data.type);
+      console.log(e.data.data);
 
-      const imageData = new ImageData(width, height);
-      for (let i = 0; i < timeline.length; i++) {
-        const val = timeline[i];
-        const idx = i * 4;
-        imageData.data[idx] = val;     // R <-- Convert grayscale to RGBA
-        imageData.data[idx + 1] = val; // G
-        imageData.data[idx + 2] = val; // B
-        imageData.data[idx + 3] = 255; // A
+      if (e.data.type === '3D_VIEW_GRAPH_READY') {
+        const { graph, height, width } = e.data.data;
+
+        const canvas = document.getElementById("3d-view-graph-canvas");
+        canvas.width = width;
+        const ctx = canvas.getContext("2d");
+
+        const imageData = new ImageData(width, height);
+        for (let i = 0; i < graph.length; i++) {
+          const val = graph[i];
+          const idx = i * 4;
+          imageData.data[idx] = val;     // R
+          imageData.data[idx + 1] = val; // G
+          imageData.data[idx + 2] = val; // B
+          imageData.data[idx + 3] = 255; // A
+        }
+
+        ctx.putImageData(imageData, 0, 0);
       }
 
-      ctx.putImageData(imageData, 0, 0);
+      else if (e.data.type === 'ENERGY_GRAPH_READY') {
+        const { graph, height, width } = e.data.data;
+
+        const canvas = document.getElementById("timeline-graph-canvas");
+        canvas.width = width;
+        console.log("Timeline Graph Width", width);
+        const ctx = canvas.getContext("2d");
+
+        const imageData = new ImageData(width, height);
+        for (let i = 0; i < graph.length; i++) {
+          const val = graph[i];
+          const idx = i * 4;
+          imageData.data[idx] = val;     // R
+          imageData.data[idx + 1] = val; // G
+          imageData.data[idx + 2] = val; // B
+          imageData.data[idx + 3] = 255; // A
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+      }
+
+
+
     };
   }, []);
 
