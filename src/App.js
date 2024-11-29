@@ -18,6 +18,7 @@ function App() {
   const [events, setEvents] = useState([]);
   const [highlightedEvent, setHighlightedEvent] = useState(null);
   const [currentSecond, setCurrentSecond] = useState(0);
+  const [loadingProgress, setLoadingProgress] = useState(0);
 
   const seekToRef = useRef(undefined);
   const ffmpegRef = useRef(new FFmpeg());
@@ -68,6 +69,18 @@ function App() {
         videoW.current = parseInt(streamMatch[1]);
         videoH.current = parseInt(streamMatch[2]);
         videoFps.current = parseFloat(streamMatch[3]);
+      }
+
+      // Progress Bar
+      const progressMatch = message.match(/time=(\d{2}):(\d{2}):(\d{2}.\d{2})/);
+      if (progressMatch && totalSeconds.current !== undefined) {
+        const hours = parseInt(progressMatch[1]);
+        const minutes = parseInt(progressMatch[2]);
+        const seconds = parseFloat(progressMatch[3]);
+        const currentTime = hours * 3600 + minutes * 60 + seconds;
+        const percent = Math.round(currentTime / totalSeconds.current * 1000) / 10;
+        // console.warn(`Progress: ${percent}%`);
+        setLoadingProgress(percent);
       }
 
     });
@@ -318,12 +331,36 @@ function App() {
         />
       </div>
       {/* Lower Part */}
-      <div className="min-w-[48rem] bg-sky-600 flex flex-row m-4 rounded-xl border-2 border-gray-900 overflow-hidden">
+      <div className="min-w-[48rem] bg-sky-600 flex flex-row m-4 rounded-xl border-2 border-gray-900 overflow-hidden relative">
+
+        {/* Loading Placeholder */}
+        {(loadingProgress < 99.9) && (
+          (loadingProgress === 0) ? (
+            <div className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
+              Upload a Video to Start ↗
+            </div>
+            ):
+            (
+              <div className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
+                Loading Video: {loadingProgress}%
+                <div className="w-40 h-2 bg-gray-500 rounded-lg ml-2">
+                  <div className="h-full bg-blue-500 rounded-lg" style={{ width: `${loadingProgress}%` }}/>
+                </div>
+              </div>
+            )
+          )
+        }
+
         {/* Left Tags */}
         <div>
-          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-200">Events</div></div>
-          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-300">Energies</div></div>
-          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-400">Thumbnails</div></div>
+          <div className="h-20 flex flex-row">
+            <div className="w-36 overflow-auto flex justify-center items-center bg-blue-200">Events</div>
+          </div>
+          <div className="h-20 flex flex-row">
+            <div className="w-36 overflow-auto flex justify-center items-center bg-blue-300">Energies</div>
+          </div>
+          <div className="h-20 flex flex-row">
+            <div className="w-36 overflow-auto flex justify-center items-center bg-blue-400">Thumbnails</div></div>
           <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-500">3D View</div></div>
         </div>
         {/* Right Graphs (sharing the same scroll bar) */}
@@ -352,7 +389,7 @@ function App() {
                   })
                 }
                 { // 2. Period of the Highlighted Event
-                  highlightedEvent && (() => {
+                  (highlightedEvent !== null) && (() => {
                     const totalSec = totalSeconds.current;
                     const totalWidth = numMergedFrames.current;
                     const left = Math.round(highlightedEvent.startTime / totalSec * totalWidth) + resizedW / 2;
@@ -365,19 +402,19 @@ function App() {
                   })()
                 }
                 { // 3. Current Playback Position Indicator
-                  currentSecond && (() => {
+                  (currentSecond !== undefined) && (() => {
                     const totalSec = totalSeconds.current;
                     const totalWidth = numMergedFrames.current;
                     const left = Math.round(currentSecond / totalSec * totalWidth) + resizedW / 2;
                     return (
                       <>
                         <div key="currentTime"
-                             className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
-                             style={{ left: `${left}px` }}
+                          className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
+                          style={{ left: `${left}px` }}
                         />
                         <div key="currentTimeFrame"
-                             className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
-                             style={{ left: `${left - resizedW / 2}px` }}
+                          className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                          style={{ left: `${left - resizedW / 2}px` }}
                         />
                       </>
 
