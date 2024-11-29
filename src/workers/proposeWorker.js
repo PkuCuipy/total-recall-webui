@@ -14,64 +14,75 @@ const proposeWorkerCode = () => {
     *   }
     * */
 
-    const { energies, totalSeconds, maxGap, maxSeconds, paddingSeconds, maxNumEvents, minEnergy } = e.data;
+    const { energies, totalSeconds, minSeconds, paddingSeconds, maxGap, maxNumEvents, minEnergy } = e.data;
     const nFrames = energies.length;
     const frameToSec = (frameIdx) => frameIdx / nFrames * totalSeconds;
 
-    // Find Local Maxima
-    const localMaxima = [];
-    for (let i = 1; i < nFrames - 1; i++) {
-      if (energies[i] > energies[i - 1] && energies[i] > energies[i + 1] && energies[i] > minEnergy) {
-        localMaxima.push({second: frameToSec(i), energy: energies[i]});
+    // Find connected domains where energy >= minEnergy
+    const domains = [];
+    let currentDomain = null;
+    for (let i = 0; i < nFrames; i++) {
+      if (energies[i] >= minEnergy) {
+        if (!currentDomain) {   // Start new domain
+          currentDomain = {
+            startFrame: i,
+            endFrame: i,
+            energySum: energies[i],
+          };
+        } else {
+          currentDomain.endFrame = i;
+          currentDomain.energySum += energies[i];
+        }
+      } else if (currentDomain) { // End current domain
+        domains.push(currentDomain);
+        currentDomain = null;
       }
     }
 
-    // Gather Events
-    const sentinelEvent = {
-      startTime: -maxGap - 2,
-      endTime: -maxGap - 1,
-      energy: 0,
-    };
-    let events = [sentinelEvent];
-    for (const { second, energy } of localMaxima) {
-      const lastEvent = events[events.length - 1];
-      if (second - lastEvent.endTime <= maxGap && second - lastEvent.startTime <= maxSeconds) {
-        lastEvent.endTime = second;
-        lastEvent.energy = Math.max(lastEvent.energy, second);
-      } else {
-        events.push({
-          startTime: second,
-          endTime: second,
-          energy: energy,
-        });
-      }
+    if (currentDomain) {  // for the last domain if it's not ended
+      domains.push(currentDomain);
     }
-    events = events.slice(1);   // Remove sentinel
 
-    // Add Padding and Clip to [0, totalSeconds]
+    // Convert frames to seconds and add padding
+    let events = domains.map(domain => ({
+      startTime: Math.max(0, frameToSec(domain.startFrame) - paddingSeconds),
+      endTime: Math.min(totalSeconds, frameToSec(domain.endFrame) + paddingSeconds),
+      avgEnergy: domain.energySum / (domain.endFrame - domain.startFrame + 1),
+    }));
+
+    // Merge overlapping events
+    events.sort((a, b) => a.startTime - b.startTime);
+    const mergedEvents = [];
     for (const event of events) {
-      event.startTime = Math.max(0, event.startTime - paddingSeconds);
-      event.endTime = Math.min(totalSeconds, event.endTime + paddingSeconds);
-    }
-
-    // Fix overlapping events
-    for (let i = 1; i < events.length; i++) {
-      if (events[i].startTime < events[i - 1].endTime) {
-        events[i - 1].endTime = events[i].startTime;
+      const lastEvent = mergedEvents[mergedEvents.length - 1];
+      if (lastEvent && event.startTime - maxGap <= lastEvent.endTime) {
+        // Merge events
+        lastEvent.endTime = Math.max(lastEvent.endTime, event.endTime);
+        lastEvent.avgEnergy = Math.max(lastEvent.avgEnergy, event.avgEnergy);
+      } else {
+        mergedEvents.push(event);
       }
     }
-    console.log("Events before filtering", events);
 
-    // Remove very short events
-    const lengthEps = 1;
-    events = events.filter((event) => event.endTime - event.startTime > lengthEps);
+    // Filter out events shorter than minimum length
+    events = mergedEvents.filter(event =>
+      event.endTime - event.startTime >= minSeconds
+    );
 
-    // Only keep top energy events
-    events.sort((a, b) => b.energy - a.energy);
+    // Sort by score (avgEnergy * duration) and keep top events
+    events.sort((a, b) => {
+      const scoreA = a.avgEnergy * (a.endTime - a.startTime);
+      const scoreB = b.avgEnergy * (b.endTime - b.startTime);
+      return scoreB - scoreA;
+    });
     events = events.slice(0, maxNumEvents);
 
-    // Sort by start time
+    // Sort by start time for final output
     events.sort((a, b) => a.startTime - b.startTime);
+
+    // Remove energy properties before sending
+    events = events.map(({ startTime, endTime }) => ({ startTime, endTime }));
+
     console.log('Events ready', events);
     postMessage({
       type: 'PROPOSED_EVENTS_READY',

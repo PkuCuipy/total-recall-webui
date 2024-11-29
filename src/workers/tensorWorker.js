@@ -6,7 +6,7 @@
 
 const tensorWorkerCode = () => {
   importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js');
-  // tf.setBackend('cpu');
+  // tf.setBackend('cpu');    // fixme: don't know why this will cause but when calculate the energy, wrong result
 
   onmessage = async (e) => {
     const { type, data } = e.data;

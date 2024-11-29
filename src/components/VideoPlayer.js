@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 
-const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl }) => {
+const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl, setSeekTo, setCurrentSecond }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const videoRef = useRef(null);
 
@@ -34,12 +33,13 @@ const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl }) => {
       videoRef.current.currentTime = timeInSeconds;
     }
   };
+  setSeekTo(seekTo);
 
   // 监听视频时间更新
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const time = videoRef.current.currentTime;
-      setCurrentTime(time);
+      setCurrentSecond(time);
       onTimeUpdate?.(time);
     }
   };

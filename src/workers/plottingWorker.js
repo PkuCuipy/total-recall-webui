@@ -47,7 +47,7 @@ const plottingWorkerCode = () => {
         const canvasX = i + leftPadding;
         for (let y = height; y >= height - h; y--) {
           const canvasIdx = y * canvasW + canvasX;
-          canvasU1[canvasIdx] = 255;
+          canvasU1[canvasIdx] = 180;
         }
       }
       console.log('Energy Graph ready', canvasU1);

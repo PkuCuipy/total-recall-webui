@@ -17,7 +17,9 @@ function App() {
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [events, setEvents] = useState([]);
   const [highlightedEvent, setHighlightedEvent] = useState(null);
+  const [currentSecond, setCurrentSecond] = useState(0);
 
+  const seekToRef = useRef(undefined);
   const ffmpegRef = useRef(new FFmpeg());
   const tensorWorkerRef = useRef(new Worker(tensorWorkerURL));
   const plottingWorkerRef = useRef(new Worker(plottingWorkerURL));
@@ -32,12 +34,12 @@ function App() {
 
   const amplify = 5.0;
   const power = 2.0;
-  const smooth = 10.0;
+  const smooth = 5.0;
 
   const maxNumEvents = 10;
   const maxGap = 10;
-  const maxSeconds = 20;
   const paddingSeconds = 1;
+  const minSeconds = paddingSeconds;
 
 
   const [resizedW, resizedH] = [80, 80];
@@ -175,11 +177,11 @@ function App() {
       proposeWorkerRef.current.postMessage({
         energies: energies,
         totalSeconds: totalSeconds.current,
-        maxGap: maxGap,
-        maxSeconds: maxSeconds,
+        minSeconds: minSeconds,
         paddingSeconds: paddingSeconds,
         maxNumEvents: maxNumEvents,
         minEnergy: 0.1,
+        maxGap: maxGap,
       });
     };
 
@@ -248,6 +250,8 @@ function App() {
       if (type === 'PROPOSED_EVENTS_READY') {
         console.log("Proposed Events", data);
         setEvents(data.events);
+        const eventsGraphDiv = document.getElementById("events-graph");
+        eventsGraphDiv.style.width = `${numMergedFrames.current + resizedW - 1}px`;
       }
       else {
         console.error("Unknown ProposeWorker message", e.data);
@@ -306,7 +310,12 @@ function App() {
       {/* Upper Parts */}
       <div className="flex-1 flex justify-center flex-row min-h-0 m-4 mb-0 gap-4">
         <EventsList/>
-        <VideoPlayer videoUrl={videoUrl} setVideoUrl={setVideoUrl}/>
+        <VideoPlayer
+          videoUrl={videoUrl}
+          setVideoUrl={setVideoUrl}
+          setSeekTo={(seekTo) => seekToRef.current = seekTo}
+          setCurrentSecond={setCurrentSecond}
+        />
       </div>
       {/* Lower Part */}
       <div className="min-w-[48rem] bg-sky-600 flex flex-row m-4 rounded-xl border-2 border-gray-900 overflow-hidden">
@@ -320,39 +329,61 @@ function App() {
         {/* Right Graphs (sharing the same scroll bar) */}
         <div className="flex-1 overflow-x-scroll no-scrollbar horizontal-scroll">
           <div className="h-20">
-            <div id="events-graph" className="flex flex-row bg-gray-600 w-[300px] h-full relative">
+            <div id="events-graph" className="flex flex-row bg-gray-800 h-full relative">
               <>
-              { // Event indicators
-                events?.map((event, idx) => {
-                  const totalSec = totalSeconds.current;
-                  const totalWidth = numMergedFrames.current;
-                  const middle = Math.round((event.startTime + event.endTime) / 2 / totalSec * totalWidth) + resizedW / 2;
-                  const left = middle - 25;
-                  return (
-                    <div key={idx}
-                      className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-red-400 cursor-pointer opacity-90 hover:opacity-100 hover:z-10"
-                      style={{ left: `${left}px` }}
-                      onClick={() => highlightedEvent === event ? setHighlightedEvent(null) : setHighlightedEvent(event)}
-                    >E{idx}</div>
-                  );
-                })
-              }
-              { // Highlighted Event as a frame on the next row
-                highlightedEvent && (() => {
-                  const totalSec = totalSeconds.current;
-                  const totalWidth = numMergedFrames.current;
-                  const left = Math.round(highlightedEvent.startTime / totalSec * totalWidth) + resizedW / 2;
-                  const right = Math.round(highlightedEvent.endTime / totalSec * totalWidth) + resizedW / 2;
-                  const width = right - left;
-                  return (
-                    <div key="highlighted"
-                        className="absolute top-[0px] h-[80px] rounded border flex justify-center items-center bg-white cursor-pointer opacity-50"
-                        style={{ left: `${left}px`, width: `${width}px` }}
-                      >{highlightedEvent ? `E${events.indexOf(highlightedEvent)}` : ""}
-                    </div>
-                  );
-                })()
-              }
+                { // 1. Tags of Events
+                  events?.map((event, idx) => {
+                    const totalSec = totalSeconds.current;
+                    const totalWidth = numMergedFrames.current;
+                    const middle = Math.round((event.startTime + event.endTime) / 2 / totalSec * totalWidth) + resizedW / 2;
+                    const left = middle - 25;
+                    return (
+                      <div key={idx}
+                        className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-red-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
+                        style={{ left: `${left}px` }}
+                        onMouseOver={() => setHighlightedEvent(event)}
+                        onMouseOut={() => setHighlightedEvent(null)}
+                        onClick={() => {
+                          seekToRef.current && seekToRef.current(event.startTime);
+                          console.log("Seek to", event.startTime);
+                        }}
+                      >E{idx}</div>
+                    );
+                  })
+                }
+                { // 2. Period of the Highlighted Event
+                  highlightedEvent && (() => {
+                    const totalSec = totalSeconds.current;
+                    const totalWidth = numMergedFrames.current;
+                    const left = Math.round(highlightedEvent.startTime / totalSec * totalWidth) + resizedW / 2;
+                    const right = Math.round(highlightedEvent.endTime / totalSec * totalWidth) + resizedW / 2;
+                    const width = right - left;
+                    return (
+                      <div key="highlighted" className="absolute top-[80px] h-[80px] rounded border-2 border-white bg-white bg-opacity-20 flex justify-center items-center select-none"
+                          style={{ left: `${left - 2}px`, width: `${width + 4}px` }}/>
+                    );
+                  })()
+                }
+                { // 3. Current Playback Position Indicator
+                  currentSecond && (() => {
+                    const totalSec = totalSeconds.current;
+                    const totalWidth = numMergedFrames.current;
+                    const left = Math.round(currentSecond / totalSec * totalWidth) + resizedW / 2;
+                    return (
+                      <>
+                        <div key="currentTime"
+                             className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
+                             style={{ left: `${left}px` }}
+                        />
+                        <div key="currentTimeFrame"
+                             className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                             style={{ left: `${left - resizedW / 2}px` }}
+                        />
+                      </>
+
+                    );
+                  })()
+                }
               </>
             </div>
           </div>
