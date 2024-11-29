@@ -6,6 +6,7 @@
 
 const tensorWorkerCode = () => {
   importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js');
+  // tf.setBackend('cpu');
 
   onmessage = async (e) => {
     const { type, data } = e.data;
@@ -46,13 +47,30 @@ const tensorWorkerCode = () => {
 
       // Masks -> Energies
       const energies = tf.tidy(() => {
-        const raw = masks.sum([1, 2]);
-        console.log(raw);
-        const smoothKernel = tf.tensor3d(new Array(smooth).fill(1), [smooth, 1, 1]).div(smooth);
-        console.log('smoothKernel', smoothKernel);
-        const smoothen = raw.expandDims(1).conv1d(smoothKernel, 1, 'same').squeeze();
+        const rawEnergies = masks.sum([1, 2]);    // -> [nFrames, ]
+
+        // Quantile 0.99 as threshold
+        const rawE = rawEnergies.slice([0], [nFrames]);
+        const sorted = rawE.dataSync().sort((a, b) => a - b);
+        const quantile = sorted[Math.floor(sorted.length * 0.99)];
+        const threshold = tf.scalar(quantile);
+
+        // Thresholding
+        const thresholded = rawEnergies.clipByValue(0, threshold.dataSync()[0]);
+
+        // Gaussian smoothing
+        const sigma = smooth;
+        const kernelSize = Math.ceil(4 * sigma);
+        const center = Math.round(kernelSize / 2);
+        const smoothKernelArray = Array.from({ length: kernelSize }, (_, i) => Math.exp(-(i - center) * (i - center) / (2 * sigma * sigma)));
+        const smoothKernel = tf.tensor3d(smoothKernelArray, [kernelSize, 1, 1]);
+        const smoothen = thresholded.expandDims(1).conv1d(smoothKernel, 1, 'same').squeeze();
+
+        // Normalize to [0, 1]
         const max = tf.max(smoothen);
-        return smoothen.div(max);
+        const min = tf.min(smoothen);
+        const range = max.sub(min);
+        return smoothen.sub(min).div(range);    // -> [0, 1]
       });
 
       // Cast to typed arrays for data transfer
@@ -74,6 +92,7 @@ const tensorWorkerCode = () => {
         frames: framesData,
         masks: masksData,
         energies: energiesData,
+        numMergedFrames: nFrames,
       });
     }
 

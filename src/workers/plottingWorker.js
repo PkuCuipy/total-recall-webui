@@ -25,7 +25,7 @@ const plottingWorkerCode = () => {
         }
       }
       const canvasU1 = Uint8Array.from(canvasF32.map((val) => Math.floor(val))); // to uint8 0-255
-      console.log('Timeline ready', canvasU1);
+      console.log('View3D Graph ready', canvasU1);
       postMessage({
         type: '3D_VIEW_GRAPH_READY',
         data: {
@@ -36,7 +36,7 @@ const plottingWorkerCode = () => {
       });
     }
 
-    else if (type === 'MAKE_ENERGY_TIMELINE') {
+    else if (type === 'MAKE_ENERGY_GRAPH') {
       const nFrames = energies.length;
       const canvasW = nFrames + width - 1;
       const canvasU1 = new Uint8Array(height * canvasW);
@@ -50,7 +50,7 @@ const plottingWorkerCode = () => {
           canvasU1[canvasIdx] = 255;
         }
       }
-      console.log('Energy timeline ready', canvasU1);
+      console.log('Energy Graph ready', canvasU1);
       postMessage({
         type: 'ENERGY_GRAPH_READY',
         data: {
@@ -61,8 +61,12 @@ const plottingWorkerCode = () => {
       });
     }
 
+    else if (type === 'MAKE_THUMBNAILS_GRAPH') {
+
+    }
+
     else {
-      console.error('Unknown message type', type);
+      console.error('Unknown type', type);
     }
 
   }
