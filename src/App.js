@@ -12,8 +12,6 @@ import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
 import { processEvents } from './utils/processEvents';
 
-// Disable console.log
-console.log = function() {}
 
 function App() {
 
@@ -351,7 +349,11 @@ function App() {
 
 
   return (
-    <div className="h-dvh flex flex-col bg-gray-900">
+    <div className="h-dvh flex flex-col bg-gray-900 max-w-screen-xl mx-auto">
+
+      {/* Serve as background */}
+      <div className="absolute top-0 left-0 w-full h-full bg-gray-900 -z-10"/>
+
       {/* Upper Parts */}
       <div className="flex-1 flex justify-center flex-row min-h-0 m-4 mb-0 gap-4">
         <EventsList
@@ -366,15 +368,16 @@ function App() {
         />
       </div>
       {/* Lower Part */}
-      <div className="min-w-[48rem] bg-gray-700 flex flex-row m-4 rounded-xl border-2 border-gray-900 overflow-hidden relative">
+      <div
+        className="min-w-[48rem] bg-gray-700 flex flex-row m-4 rounded-xl border-2 border-gray-900 overflow-hidden relative">
 
         {/* Loading Placeholder */}
         {(loadingProgress < 99.9) && (
           (loadingProgress === 0) ? (
-            <div className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
-              Upload a Video to Start ↗
-            </div>
-            ):
+              <div className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
+                Upload a Video to Start ↗
+              </div>
+            ) :
             (
               <div className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
                 Loading Video: {loadingProgress}%
@@ -383,19 +386,14 @@ function App() {
                 </div>
               </div>
             )
-          )
+        )
         }
 
         {/* Left Tags */}
         <div>
-          <div className="h-20 flex flex-row">
-            <div className="w-36 overflow-auto flex justify-center items-center bg-blue-200">Events</div>
-          </div>
-          <div className="h-20 flex flex-row">
-            <div className="w-36 overflow-auto flex justify-center items-center bg-blue-300">Energies</div>
-          </div>
-          <div className="h-20 flex flex-row">
-            <div className="w-36 overflow-auto flex justify-center items-center bg-blue-400">Thumbnails</div></div>
+          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-200">Events</div></div>
+          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-300">Energies</div></div>
+          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-400">Thumbnails</div></div>
           <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-500">3D View</div></div>
         </div>
 
@@ -412,14 +410,14 @@ function App() {
                     const left = middle - 25;
                     return (
                       <div key={idx}
-                        className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
-                        style={{ left: `${left}px` }}
-                        onMouseOver={() => setHighlightedEvent(event)}
-                        onMouseOut={() => setHighlightedEvent(null)}
-                        onClick={() => {
-                          seekToRef.current && seekToRef.current(event.startTime);
-                          console.log("Seek to", event.startTime);
-                        }}
+                           className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
+                           style={{ left: `${left}px` }}
+                           onMouseOver={() => setHighlightedEvent(event)}
+                           onMouseOut={() => setHighlightedEvent(null)}
+                           onClick={() => {
+                             seekToRef.current && seekToRef.current(event.startTime);
+                             console.log("Seek to", event.startTime);
+                           }}
                       >{event.type.charAt(0)}</div>
                     );
                   })
@@ -452,12 +450,12 @@ function App() {
                     return (
                       <>
                         <div key="currentTime"
-                          className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
-                          style={{ left: `${left}px` }}
+                             className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
+                             style={{ left: `${left}px` }}
                         />
                         <div key="currentTimeFrame"
-                          className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
-                          style={{ left: `${left - resizedW / 2}px` }}
+                             className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                             style={{ left: `${left - resizedW / 2}px` }}
                         />
                       </>
 

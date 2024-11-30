@@ -45,40 +45,33 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, setSeekTo, setCurrentSecond }) => 
   }, [setVideoUrl, videoUrl]);
 
   return (
-
-    <div className="flex justify-center bg-black rounded-xl overflow-hidden border-2 border-gray-500">
-      <div className="aspect-video max-h-full max-w-full flex items-center bg-gray-800 justify-center min-w-[30rem]">
-
-        {!videoUrl ?
-          (
-            <div className="text-center p-8">
-              <p className="text-gray-500 mb-4">Upload Video</p>
-              <label className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600">
-                Choose File
-                <input
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                />
-              </label>
-            </div>
-          ) :
-          (
-            <div>
-              <video
-                ref={videoRef}
-                src={videoUrl}
-                onTimeUpdate={handleTimeUpdate}
-                controls={true}
+    <div className="flex flex-1 justify-center bg-black rounded-xl overflow-hidden border-2 border-gray-500">
+      {!videoUrl ?
+        (
+          <div className="text-center p-8 w-full h-full bg-gray-800 flex flex-col justify-center items-center">
+            <p className="text-gray-500 mb-4">Upload Video</p>
+            <label className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600 w-32">
+              Choose File
+              <input
+                type="file"
+                accept="video/*"
+                className="hidden"
+                onChange={handleFileSelect}
               />
-            </div>
-          )
-        }
-
-      </div>
+            </label>
+          </div>
+        ) :
+        (
+          <video
+            className="object-fit h-full w-full"
+            ref={videoRef}
+            src={videoUrl}
+            onTimeUpdate={handleTimeUpdate}
+            controls={true}
+          />
+        )
+      }
     </div>
-
   );
 };
 

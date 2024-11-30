@@ -118,10 +118,10 @@ const EventsList = ({ events, seekTo }) => {
   // events = fakeEvents;   // debug only
   return (
     <div
-      className="min-w-[25rem] p-4 flex flex-col bg-sky-900 text-neutral-300 rounded-xl border-2 border-gray-400 overflow-scroll items-center justify-center">
+      className="min-w-[25rem] p-4 flex flex-col bg-sky-900 text-neutral-300 rounded-xl border-2 border-gray-400 overflow-scroll">
       {
         (events.length === 0) ?
-          <div>
+          <div className="m-auto">
             Upload a video to start ➡
           </div>
           :
