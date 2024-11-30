@@ -118,7 +118,7 @@ const EventsList = ({ events, seekTo }) => {
   // events = fakeEvents;   // debug only
   return (
     <div
-      className="min-w-[25rem] p-4 flex flex-col bg-gray-800 text-neutral-300 rounded-xl border-2 border-gray-500 overflow-scroll">
+      className="min-w-[25rem] p-4 flex flex-col bg-gray-800 text-neutral-300 rounded-xl border-2 border-gray-500 overflow-auto">
       {
         (events.length === 0) ?
           <div className="m-auto">
