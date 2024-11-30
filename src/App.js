@@ -396,8 +396,15 @@ function App() {
                     const right = Math.round(highlightedEvent.endTime / totalSec * totalWidth) + resizedW / 2;
                     const width = right - left;
                     return (
-                      <div key="highlighted" className="absolute top-[80px] h-[80px] rounded border-2 border-white bg-white bg-opacity-20 flex justify-center items-center select-none"
-                          style={{ left: `${left - 2}px`, width: `${width + 4}px` }}/>
+                      <>
+                        <div key="highlighted-in-energy-graph"
+                             className="absolute top-[80px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                             style={{ left: `${left}px`, width: `${width}px` }}/>
+                        <div key="highlighted-in-3d-view-graph"
+                             className="absolute top-[240px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                             style={{ left: `${left - resizedW / 2}px`, width: `${width + resizedW}px` }}/>
+                      </>
+
                     );
                   })()
                 }
