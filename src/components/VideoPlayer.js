@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
 
-const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl, setSeekTo, setCurrentSecond }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [totalTime, setTotalTime] = useState(0);
+const VideoPlayer = ({ setVideoUrl, videoUrl, setSeekTo, setCurrentSecond }) => {
+
   const videoRef = useRef(null);
+
+  console.warn("VideoPlayer is rendered");
 
   // 处理文件选择上传
   const handleFileSelect = (e) => {
@@ -12,18 +13,6 @@ const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl, setSeekTo, setCurren
       const url = URL.createObjectURL(file);
       console.log(url);
       setVideoUrl(url);
-    }
-  };
-
-  // 视频控制函数
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
     }
   };
 
@@ -40,16 +29,6 @@ const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl, setSeekTo, setCurren
     if (videoRef.current) {
       const time = videoRef.current.currentTime;
       setCurrentSecond(time);
-      onTimeUpdate?.(time);
-    }
-  };
-
-  // 监听视频加载完成
-  const handleLoadedMetadata = () => {
-    if (videoRef.current) {
-      setTotalTime(videoRef.current.duration);
-      console.log(videoRef.current.duration)
-      console.log(videoRef.current)
     }
   };
 
@@ -59,6 +38,7 @@ const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl, setSeekTo, setCurren
     // setVideoUrl("https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm");  // FIXME: FOR DEBUG
     return () => {
       if (videoUrl) {
+        console.warn("Revoke URL:", videoUrl);
         URL.revokeObjectURL(videoUrl);
       }
     };
@@ -90,7 +70,6 @@ const VideoPlayer = ({ onTimeUpdate, setVideoUrl, videoUrl, setSeekTo, setCurren
                 ref={videoRef}
                 src={videoUrl}
                 onTimeUpdate={handleTimeUpdate}
-                onLoadedMetadata={handleLoadedMetadata}
                 controls={true}
               />
             </div>

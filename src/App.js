@@ -10,6 +10,10 @@ import proposeWorkerURL from "./workers/proposeWorker";
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
+import { processEvents } from './utils/processEvents';
+
+// Disable console.log
+console.log = function() {}
 
 function App() {
 
@@ -262,11 +266,30 @@ function App() {
       const { type, data } = e.data;
       if (type === 'PROPOSED_EVENTS_READY') {
         console.log("Proposed Events", data);
-        setEvents(data.events);
+
+        // Initialize events with processing status
+        const initialEvents = data.events.map(event => ({
+          ...event,
+          title: 'pending',
+          description: 'Pending...'
+        }));
+
+        setEvents(initialEvents);
         const eventsGraphDiv = document.getElementById("events-graph");
         eventsGraphDiv.style.width = `${numMergedFrames.current + resizedW - 1}px`;
-      }
-      else {
+
+        // Function to update a single event
+        const updateEvent = (index, updatedEvent) => {
+          setEvents(currentEvents =>
+            currentEvents.map((event, i) =>
+              i === index ? updatedEvent : event
+            )
+          );
+        };
+
+        // Start processing events
+        processEvents(initialEvents, ffmpegRef.current, 'input.mp4', updateEvent);
+      } else {
         console.error("Unknown ProposeWorker message", e.data);
       }
     };
@@ -295,7 +318,7 @@ function App() {
     const ThumbnailsCanvas = document.getElementById("thumbnails-graph-canvas");
     const ThumbnailsCtx = ThumbnailsCanvas.getContext("2d");
     ThumbnailsCtx.fillStyle = "#345";
-    ThumbnailsCtx.fillRect(0, 0, 3100, 80);
+    ThumbnailsCtx.fillRect(0, 0, 300, 80);
     ThumbnailsCtx.fillStyle = "#FFF";
     ThumbnailsCtx.font = "20px Arial";
     ThumbnailsCtx.fillText(videoUrl ? "Loading Thumbnails Graph ..." : "Thumbnails Graph (No Video Loaded)", 20, 45);
@@ -322,7 +345,10 @@ function App() {
     <div className="h-dvh flex flex-col bg-gray-900">
       {/* Upper Parts */}
       <div className="flex-1 flex justify-center flex-row min-h-0 m-4 mb-0 gap-4">
-        <EventsList/>
+        <EventsList
+          events={events}
+          seekTo={seekToRef.current}
+        />
         <VideoPlayer
           videoUrl={videoUrl}
           setVideoUrl={setVideoUrl}
@@ -331,7 +357,7 @@ function App() {
         />
       </div>
       {/* Lower Part */}
-      <div className="min-w-[48rem] bg-sky-600 flex flex-row m-4 rounded-xl border-2 border-gray-900 overflow-hidden relative">
+      <div className="min-w-[48rem] bg-gray-700 flex flex-row m-4 rounded-xl border-2 border-gray-900 overflow-hidden relative">
 
         {/* Loading Placeholder */}
         {(loadingProgress < 99.9) && (
@@ -363,6 +389,7 @@ function App() {
             <div className="w-36 overflow-auto flex justify-center items-center bg-blue-400">Thumbnails</div></div>
           <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-500">3D View</div></div>
         </div>
+
         {/* Right Graphs (sharing the same scroll bar) */}
         <div className="flex-1 overflow-x-scroll no-scrollbar horizontal-scroll">
           <div className="h-20">
@@ -376,7 +403,7 @@ function App() {
                     const left = middle - 25;
                     return (
                       <div key={idx}
-                        className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-red-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
+                        className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
                         style={{ left: `${left}px` }}
                         onMouseOver={() => setHighlightedEvent(event)}
                         onMouseOut={() => setHighlightedEvent(null)}
@@ -384,7 +411,7 @@ function App() {
                           seekToRef.current && seekToRef.current(event.startTime);
                           console.log("Seek to", event.startTime);
                         }}
-                      >E{idx}</div>
+                      >{event.type.charAt(0)}</div>
                     );
                   })
                 }
@@ -432,7 +459,7 @@ function App() {
             </div>
           </div>
           <div className="h-20"><canvas id="energy-graph-canvas" width="3600" height="80"></canvas></div>
-          <div className="h-20"><canvas id="thumbnails-graph-canvas" width="3600" height="80"></canvas></div>
+          <div className="h-20"><canvas id="thumbnails-graph-canvas" width="300" height="80"></canvas></div>
           <div className="h-20"><canvas id="3d-view-graph-canvas" width="3600" height="80"></canvas></div>
         </div>
       </div>

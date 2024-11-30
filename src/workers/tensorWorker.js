@@ -8,7 +8,11 @@ const tensorWorkerCode = () => {
   importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js');
   // tf.setBackend('cpu');    // fixme: don't know why this will cause but when calculate the energy, wrong result
 
+
   onmessage = async (e) => {
+
+    console.warn('TensorWorker is called');
+
     const { type, data } = e.data;
 
     if (type === 'CONVERT_FRAMES') {
@@ -86,7 +90,7 @@ const tensorWorkerCode = () => {
       energies.dispose();
 
       // Transfer data back to main thread
-      console.log('Tensors ready', framesData, masksData, energiesData);
+      // console.log('Tensors ready', framesData, masksData, energiesData);
       postMessage({
         type: 'TENSORS_READY',
         frames: framesData,

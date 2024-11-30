@@ -14,6 +14,8 @@ const proposeWorkerCode = () => {
     *   }
     * */
 
+    console.warn('ProposeWorker is called');
+
     const { energies, totalSeconds, minSeconds, paddingSeconds, maxGap, maxNumEvents, minEnergy } = e.data;
     const nFrames = energies.length;
     const frameToSec = (frameIdx) => frameIdx / nFrames * totalSeconds;
@@ -80,10 +82,16 @@ const proposeWorkerCode = () => {
     // Sort by start time for final output
     events.sort((a, b) => a.startTime - b.startTime);
 
-    // Remove energy properties before sending
-    events = events.map(({ startTime, endTime }) => ({ startTime, endTime }));
+    // Add `type`, `title`, `description` fields
+    events = events.map(({ startTime, endTime }, idx) => ({
+      type: 'Type',
+      title: `Event Found ${idx + 1}`,
+      description: '',
+      startTime: startTime,
+      endTime: endTime,
+    }));
 
-    console.log('Events ready', events);
+    // console.log('Events ready', events);
     postMessage({
       type: 'PROPOSED_EVENTS_READY',
       data: {
