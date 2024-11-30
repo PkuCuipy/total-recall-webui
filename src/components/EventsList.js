@@ -20,7 +20,7 @@ const EventBlock = ({ event, seekTo }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
-    <div className="flex w-full my-1.5 items-center justify-between rounded-xl bg-sky-950 select-none cursor-pointer hover:opacity-90"
+    <div className="flex w-full my-1.5 items-center justify-between rounded-xl bg-gray-900 select-none cursor-pointer hover:opacity-90"
          onClick={() => seekTo(event.startTime)}
           onMouseEnter={() => setHovered(true)}
           onMouseLeave={() => setHovered(false)}
@@ -118,7 +118,7 @@ const EventsList = ({ events, seekTo }) => {
   // events = fakeEvents;   // debug only
   return (
     <div
-      className="min-w-[25rem] p-4 flex flex-col bg-sky-900 text-neutral-300 rounded-xl border-2 border-gray-400 overflow-scroll">
+      className="min-w-[25rem] p-4 flex flex-col bg-gray-800 text-neutral-300 rounded-xl border-2 border-gray-500 overflow-scroll">
       {
         (events.length === 0) ?
           <div className="m-auto">

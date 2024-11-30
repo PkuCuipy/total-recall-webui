@@ -49,7 +49,7 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, setSeekTo, setCurrentSecond }) => 
       {!videoUrl ?
         (
           <div className="text-center p-8 w-full h-full bg-gray-800 flex flex-col justify-center items-center">
-            <p className="text-gray-500 mb-4">Upload Video</p>
+            <p className="text-gray-300 mb-4">Upload Video</p>
             <label className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600 w-32">
               Choose File
               <input
