@@ -118,20 +118,23 @@ const EventsList = ({ events, seekTo }) => {
   // events = fakeEvents;   // debug only
   return (
     <div
-      className="min-w-[25rem] p-4 flex flex-col bg-gray-800 text-neutral-300 rounded-xl border-2 border-gray-500 overflow-auto">
+      className="min-w-[25rem] text-neutral-300 rounded-xl border-2 border-gray-500 overflow-hidden">
       {
         (events.length === 0) ?
-          <div className="m-auto">
+          <div className="w-full h-full bg-gray-700 flex items-center justify-center text-gray-300">
             Upload a video to start ➡
           </div>
           :
-          events.map((event, idx) => (
-            <EventBlock
-              key={idx}
-              event={event}
-              seekTo={seekTo}
-            />
-          ))
+          <div className="p-4 w-full h-full flex flex-col overflow-auto bg-gray-800">{
+            events.map((event, idx) => (
+              <EventBlock
+                key={idx}
+                event={event}
+                seekTo={seekTo}
+              />
+            ))
+          }
+          </div>
       }
     </div>
   );

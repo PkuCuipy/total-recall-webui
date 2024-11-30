@@ -146,7 +146,7 @@ function App() {
           type: 'CONVERT_FRAMES',
           data: {
             framesU1Array: u1arr,
-            mergeEvery: Math.ceil(videoFps.current / 10),
+            mergeEvery: Math.ceil(videoFps.current / 3),
             height: resizedH,
             width: resizedW,
             amp: amplify,
@@ -368,13 +368,12 @@ function App() {
         />
       </div>
       {/* Lower Part */}
-      <div
-        className="min-w-[48rem] bg-gray-700 flex flex-row m-4 rounded-xl border-2 border-gray-500 overflow-hidden relative">
+      <div className="min-w-[48rem] bg-gray-700 flex flex-row m-4 rounded-xl border-2 border-gray-500 overflow-hidden relative">
 
         {/* Loading Placeholder */}
         {(loadingProgress < 99.9) && (
           (loadingProgress === 0) ? (
-              <div className="absolute top-0 left-0 w-full h-full bg-gray-800 flex justify-center items-center z-20 text-gray-300">
+              <div className="absolute top-0 left-0 w-full h-full bg-gray-700 flex justify-center items-center z-20 text-gray-300">
                 Upload a Video to Start ↗
               </div>
             ) :
