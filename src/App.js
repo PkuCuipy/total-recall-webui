@@ -25,10 +25,19 @@ function App() {
   const [loadingProgress, setLoadingProgress] = useState(0);
 
   const seekToRef = useRef(undefined);
-  const ffmpegRef = useRef(new FFmpeg());
-  const tensorWorkerRef = useRef(new Worker(tensorWorkerURL));
-  const plottingWorkerRef = useRef(new Worker(plottingWorkerURL));
-  const proposeWorkerRef = useRef(new Worker(proposeWorkerURL));
+
+  const ffmpegRef = useRef(null);
+  const tensorWorkerRef = useRef(null);
+  const plottingWorkerRef = useRef(null);
+  const proposeWorkerRef = useRef(null);
+
+  useEffect(() => {
+    ffmpegRef.current = new FFmpeg();
+    tensorWorkerRef.current = new Worker(tensorWorkerURL);
+    plottingWorkerRef.current = new Worker(plottingWorkerURL);
+    proposeWorkerRef.current = new Worker(proposeWorkerURL);
+  }, []);
+
 
   const totalSeconds = useRef(undefined);
   const videoW = useRef(undefined);
