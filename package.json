@@ -2,6 +2,7 @@
   "name": "total-recall-webui",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@babel/plugin-proposal-private-property-in-object": "^7.21.0",
     "@ffmpeg/ffmpeg": "^0.12.10",
