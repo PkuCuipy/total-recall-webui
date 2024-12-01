@@ -358,7 +358,7 @@ function App() {
               seekToRef.current(sec);
               // 2. Scroll to the current playback position
               setTimeout(() => {
-                const indicator = document.getElementById("current-playback-position-indicator");
+                const indicator = document.getElementById("current-playback-position-indicator-span");
                 if (indicator) {
                   indicator.scrollIntoView({ behavior: "smooth", block: "center" });
                 }
@@ -500,7 +500,6 @@ function App() {
                         <>
                           <div
                             key="currentTime"
-                            id="current-playback-position-indicator"
                             className="absolute top-[81px] h-[165px] w-[2px] rounded-t bg-yellow-400 opacity-60"
                             style={{ left: `${left}px` }}
                           />
@@ -508,6 +507,11 @@ function App() {
                             key="currentTimeFrame"
                             className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-60"
                             style={{ left: `${left - resizedW / 2}px` }}
+                          />
+                          <div
+                            id="current-playback-position-indicator-span-span"
+                            className="absolute top-[0px] h-[0px] w-[500px] bg-yellow-400 opacity-60"
+                            style={{ left: `${left - 250}px` }}
                           />
                         </>
                       );
