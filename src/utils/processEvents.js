@@ -1,6 +1,22 @@
+
 // Extract a video frame
-const extractFrame = async (ffmpeg, inputVideoName, timeInSeconds, resizedH, resizedW) => {
-  // TODO
+const extractFrameAsURL = async (ffmpeg, inputVideoName, timeInSeconds, targetHeight, targetWidth, eventIndex) => {
+  const outputName = `event_${eventIndex}_thumbnail.png`;
+  try {
+    await ffmpeg.exec([
+      '-ss', timeInSeconds.toString(),
+      '-i', inputVideoName,
+      '-vf', `scale=${targetWidth}:${targetHeight}`,
+      '-vframes', '1',
+      '-loglevel', 'quiet',
+      outputName
+    ]);
+    const data = await ffmpeg.readFile(outputName);
+    return URL.createObjectURL(new Blob([data.buffer], { type: 'image/png' }));
+  } catch (error) {
+    console.error('Failed to extract frame:', error);
+    throw error;
+  }
 }
 
 
@@ -26,7 +42,10 @@ const extractVideoClipBlob = async (ffmpeg, inputVideoName, startTime, endTime, 
 
 
 // Fetch description from backend
-const fetchEventTitleAndDescription = async (videoBlob, eventIndex) => {
+const fetchEventDetails = async (videoBlob, eventIndex) => {
+
+  console.warn(`Fetching description for event ${eventIndex}...`);
+
   const formData = new FormData();
   formData.append('video', videoBlob, `event_${eventIndex}.mp4`);
   
@@ -58,20 +77,33 @@ const fetchEventTitleAndDescription = async (videoBlob, eventIndex) => {
 const processEvent = async (event, eventID, ffmpeg, inputVideoName, updateEvent) => {
   try {
     const videoBlob = await extractVideoClipBlob(
-      ffmpeg, 
+      ffmpeg,
       inputVideoName,
       event.startTime,
       event.endTime,
       eventID
     );
-    const { type, title, description, objects } = await fetchEventTitleAndDescription(videoBlob, eventID);
-    updateEvent(eventID, {
+
+    // Extract thumbnail
+    const midTime = (event.startTime + event.endTime) / 2;    // fixme: This can be changed to energy peak time
+    const thumbnailURL = await extractFrameAsURL(ffmpeg, inputVideoName, midTime, 180, 320, eventID);
+    const eventWithThumbnail = {
       ...event,
+      thumbnailURL,
+    };
+    updateEvent(eventID, eventWithThumbnail);
+
+    // Fetch event details from backend API
+    const { type, title, description, objects } = await fetchEventDetails(videoBlob, eventID);
+    const eventWithThumbnailAndDetails = {
+      ...eventWithThumbnail,
       type,
       title,
       description,
-      objects,
-    });
+      objects
+    }
+    updateEvent(eventID, eventWithThumbnailAndDetails);
+
   } catch (error) {
     console.error(`Failed to process event ${eventID}:`, error);
     updateEvent(eventID, {

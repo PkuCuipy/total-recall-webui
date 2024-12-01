@@ -2,7 +2,11 @@ import React, { useRef, useState, useEffect } from 'react';
 
 
 const formatSeconds = (seconds) => {
-  /* Format like: `09:03:12` or `03:12` if hours is 0 */
+  /*
+    Format like: `09:03:12` or `03:12` if hours is 0
+    * Input: Number of seconds
+    * Output: String of formatted time
+   */
   const h = Math.floor(seconds / 3600);
   const m = Math.floor(seconds / 60) % 60;
   const s = Math.floor(seconds) % 60;
@@ -12,7 +16,11 @@ const formatSeconds = (seconds) => {
 }
 
 const textToColor = (text) => {
-  /* Generate a color from the hash of the text */
+  /*
+    Generate a color from the hash of the text
+    * Input: String of Any text
+    * Output: String of TailwindCSS color class
+   */
   const colors = ["bg-red-200", "bg-orange-200", "bg-yellow-200", "bg-lime-200", "bg-green-200", "bg-teal-200", "bg-blue-200", "bg-indigo-200", "bg-purple-200", "bg-pink-200"];
   const hash = text.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return colors[hash % colors.length];
@@ -20,13 +28,21 @@ const textToColor = (text) => {
 
 
 const EventBlock = ({ event, seekTo }) => {
+  //
+  // Layout when not hovered:
   //   *------------------------------------*
   //   |          | Title       |           |
-  //   | TypeIcon | Description | Thumbnail |
+  //   |   Icon   |             | Thumbnail |
   //   |          | StartTime   |           |
   //   *------------------------------------*
+  // Layout when hovered:
+  //   *------------------------------------*
+  //   |                        |           |
+  //   |       Description      | Thumbnail |
+  //   |                        |           |
+  //   *------------------------------------*
+  //
   const [hovered, setHovered] = useState(false);
-
   return (
     <div
       className="flex w-full my-1.5 items-center justify-between rounded-xl bg-gray-900 select-none cursor-pointer hover:opacity-90"
@@ -51,7 +67,7 @@ const EventBlock = ({ event, seekTo }) => {
           <div className="flex-1"/>
           {/* Right Thumbnail*/}
           <div className="w-[100px] h-[70px] m-2 bg-gray-500 flex items-center justify-center rounded-lg relative cursor-pointer overflow-hidden">
-            <img className="absolute w-full h-full object-fit" src={`https://picsum.photos/200/300`} alt="Thumbnail"/>
+            <img className="absolute w-full h-full object-fit" src={event.thumbnailURL} alt="Thumbnail"/>
           </div>
         </>
         :
@@ -66,7 +82,7 @@ const EventBlock = ({ event, seekTo }) => {
           <div className="flex-1"/>
           {/* Right Thumbnail*/}
           <div className="w-[100px] h-[70px] m-2 bg-gray-500 flex items-center justify-center rounded-lg relative cursor-pointer overflow-hidden">
-            <img className="absolute w-full h-full object-fit opacity-70 transition-opacity" src={`https://picsum.photos/200/300`} alt="Thumbnail"/>
+            <img className="absolute w-full h-full object-fit opacity-70 transition-opacity" src={event.thumbnailURL} alt="Thumbnail"/>
             <div className="absolute bg-neutral-900 text-neutral-100 bg-opacity-70 text-2xl py-0.5 px-3 rounded-lg"> ▶ </div>
           </div>
         </>
