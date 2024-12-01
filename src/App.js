@@ -384,13 +384,13 @@ function App() {
         }
 
         {/* Left Tags */}
-        <div className="w-36 bg-gray-800 text-gray-400 text-md font-bold shadow-md shadow-gray-950 z-10">
+        <div className="w-36 bg-gray-700 text-gray-300 text-md font-bold shadow-md shadow-gray-950 z-10">
           <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">Events</div></div>
-          <div className="border border-gray-700"/> {/* Separator */}
+          <div className="border border-gray-500"/> {/* Separator */}
           <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">Energies</div></div>
-          <div className="border border-gray-700"/> {/* Separator */}
+          <div className="border border-gray-500"/> {/* Separator */}
           <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">Thumbnails</div></div>
-          <div className="border border-gray-700"/> {/* Separator */}
+          <div className="border border-gray-500"/> {/* Separator */}
           <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">3D View</div></div>
         </div>
 
@@ -523,11 +523,11 @@ function App() {
               </>
             </div>
           </div>
-          <div className="border border-gray-700 graph-separator"/> {/* Separator */}
+          <div className="border border-gray-600 graph-separator"/> {/* Separator */}
           <div className="h-20"><canvas id="energy-graph-canvas" width="3600" height="80"></canvas></div>
-          <div className="border border-gray-700 graph-separator"/> {/* Separator */}
+          <div className="border border-gray-600 graph-separator"/> {/* Separator */}
           <div className="h-20"><canvas id="thumbnails-graph-canvas" width="300" height="80"></canvas></div>
-          <div className="border border-gray-700 graph-separator"/> {/* Separator */}
+          <div className="border border-gray-600 graph-separator"/> {/* Separator */}
           <div className="h-20"><canvas id="3d-view-graph-canvas" width="3600" height="80"></canvas></div>
         </div>
       </div>
