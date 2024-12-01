@@ -357,12 +357,11 @@ function App() {
               // 1. Seek to the specified time
               seekToRef.current(sec);
               // 2. Scroll to the current playback position
-              setTimeout(() => {
-                const indicator = document.getElementById("current-playback-position-indicator-span");
-                if (indicator) {
-                  indicator.scrollIntoView({ behavior: "smooth", block: "center" });
-                }
-              }, 100);
+              const pos = sec / totalSeconds.current * numMergedFrames.current + resizedW / 2;
+              const leftPadding = 100;
+              const scrollToPos = Math.max(0, pos - leftPadding);
+              const graphsContainer = document.getElementById("graphs-container");
+              graphsContainer.scrollTo({left: scrollToPos, behavior: 'smooth'});
             }
           }}
         />
@@ -407,7 +406,10 @@ function App() {
         </div>
 
         {/* Right Graphs (sharing the same scroll bar) */}
-        <div className="overflow-x-scroll no-scrollbar cursor-pointer min-w-full">
+        <div
+          id="graphs-container"
+          className="overflow-x-scroll no-scrollbar cursor-pointer min-w-full"
+        >
           <div
             onWheel={(e) => {  // large y-axis scroll likely caused by mouse wheel
               if (Math.abs(e.deltaY) >= 50) {
@@ -507,11 +509,6 @@ function App() {
                             key="currentTimeFrame"
                             className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-60"
                             style={{ left: `${left - resizedW / 2}px` }}
-                          />
-                          <div
-                            id="current-playback-position-indicator-span-span"
-                            className="absolute top-[0px] h-[0px] w-[500px] bg-yellow-400 opacity-60"
-                            style={{ left: `${left - 250}px` }}
                           />
                         </>
                       );
