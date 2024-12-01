@@ -45,7 +45,7 @@ const plottingWorkerCode = () => {
       const canvasU1 = new Uint8Array(height * canvasW);
       const leftPadding = Math.floor(width / 2);
       for (let i = 0; i < nFrames; i++) {
-        const h = Math.floor(energies[i] * height);
+        const h = Math.floor(energies[i] * height) * 0.9; // 0.9 for prettier visualization
         for (let y = height; y >= height - h; y--) {
           // canvasU1[y][i + leftPadding]
           const canvasIdx = y * canvasW + i + leftPadding;

@@ -395,140 +395,142 @@ function App() {
         </div>
 
         {/* Right Graphs (sharing the same scroll bar) */}
-        <div
-          className="flex-1 overflow-x-scroll no-scrollbar cursor-pointer flex flex-col"
-          onWheel={(e) => {  // large y-axis scroll likely caused by mouse wheel
-            if (Math.abs(e.deltaY) >= 50) {
-              e.currentTarget.scrollLeft += (e.deltaY);
-            }
-          }}
-          onMouseMove={(e) => {   // Handle cursor movement in timeline
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const totalSec = totalSeconds.current;
-            const totalWidth = numMergedFrames.current;
-            const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
-            setCursorPosSeconds(currentCursorSec);
-            // Also seek to the cursor position if left mouse button is pressed
-            if (seekToRef.current && e.buttons === 1) {
-              if (highlightedEvent === null) {
-                seekToRef.current(currentCursorSec);
-              } else {
-                seekToRef.current(highlightedEvent.startTime);
+        <div className="overflow-x-scroll no-scrollbar cursor-pointer">
+          <div
+            onWheel={(e) => {  // large y-axis scroll likely caused by mouse wheel
+              if (Math.abs(e.deltaY) >= 50) {
+                e.currentTarget.scrollLeft += (e.deltaY);
               }
-            }
-          }}
-          onMouseLeave={() => setCursorPosSeconds(null)}
-          onMouseDown={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const totalSec = totalSeconds.current;
-            const totalWidth = numMergedFrames.current;
-            const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
-            setCursorPosSeconds(currentCursorSec);
-            if (seekToRef.current) {
-              if (highlightedEvent === null) {
-                seekToRef.current(currentCursorSec);
-              } else {
-                seekToRef.current(highlightedEvent.startTime);
-              }
-            }
-          }}
-        >
-          <div className="h-20">
-            <div id="events-graph" className="flex flex-row bg-gray-800 h-full relative">
-              <>
-                { // 1. Tags of Events
-                  events?.map((event, idx) => {
-                    const totalSec = totalSeconds.current;
-                    const totalWidth = numMergedFrames.current;
-                    const middle = Math.round((event.startTime + event.endTime) / 2 / totalSec * totalWidth) + resizedW / 2;
-                    const left = middle - 25;
-                    return (
-                      <div
-                        key={idx}
-                        className="absolute top-[15px] w-[50px] h-[50px] text-2xl rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
-                        style={{ left: `${left}px` }}
-                        onMouseOver={() => setHighlightedEvent(event)}
-                        onMouseOut={() => setHighlightedEvent(null)}
-                        onClick={() => {seekToRef.current && seekToRef.current(event.startTime)}}
-                      >
-                        {[...event.type][0]}    {/* This is a trick to get the first character that also works for emojis */}
-                      </div>
-                    );
-                  })
+            }}
+            onMouseMove={(e) => {   // Handle cursor movement in timeline
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              console.log(e.clientX, rect.left, x);
+              const totalSec = totalSeconds.current;
+              const totalWidth = numMergedFrames.current;
+              const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
+              setCursorPosSeconds(currentCursorSec);
+              // Also seek to the cursor position if left mouse button is pressed
+              if (seekToRef.current && e.buttons === 1) {
+                if (highlightedEvent === null) {
+                  seekToRef.current(currentCursorSec);
+                } else {
+                  seekToRef.current(highlightedEvent.startTime);
                 }
-                { // 2. Period of the Highlighted Event
-                  (highlightedEvent !== null) && (() => {
-                    const totalSec = totalSeconds.current;
-                    const totalWidth = numMergedFrames.current;
-                    const left = Math.round(highlightedEvent.startTime / totalSec * totalWidth) + resizedW / 2;
-                    const right = Math.round(highlightedEvent.endTime / totalSec * totalWidth) + resizedW / 2;
-                    const width = right - left;
-                    return (
-                      <>
-                        <div key="highlighted-in-energy-graph"
-                             className="absolute top-[82px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
-                             style={{ left: `${left}px`, width: `${width}px` }}/>
-                        <div key="highlighted-in-3d-view-graph"
-                             className="absolute top-[246px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
-                             style={{ left: `${left - resizedW / 2}px`, width: `${width + resizedW}px` }}/>
-                      </>
+              }
+            }}
+            onMouseLeave={() => setCursorPosSeconds(null)}
+            onMouseDown={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = e.clientX - rect.left;
+              const totalSec = totalSeconds.current;
+              const totalWidth = numMergedFrames.current;
+              const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
+              setCursorPosSeconds(currentCursorSec);
+              if (seekToRef.current) {
+                if (highlightedEvent === null) {
+                  seekToRef.current(currentCursorSec);
+                } else {
+                  seekToRef.current(highlightedEvent.startTime);
+                }
+              }
+            }}
+          >
+            <div className="h-20">
+              <div id="events-graph" className="flex flex-row bg-gray-800 h-full relative">
+                <>
+                  { // 1. Tags of Events
+                    events?.map((event, idx) => {
+                      const totalSec = totalSeconds.current;
+                      const totalWidth = numMergedFrames.current;
+                      const middle = Math.round((event.startTime + event.endTime) / 2 / totalSec * totalWidth) + resizedW / 2;
+                      const left = middle - 25;
+                      return (
+                        <div
+                          key={idx}
+                          className="absolute top-[15px] w-[50px] h-[50px] text-2xl rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
+                          style={{ left: `${left}px` }}
+                          onMouseOver={() => setHighlightedEvent(event)}
+                          onMouseOut={() => setHighlightedEvent(null)}
+                          onClick={() => {seekToRef.current && seekToRef.current(event.startTime)}}
+                        >
+                          {[...event.type][0]}    {/* This is a trick to get the first character that also works for emojis */}
+                        </div>
+                      );
+                    })
+                  }
+                  { // 2. Period of the Highlighted Event
+                    (highlightedEvent !== null) && (() => {
+                      const totalSec = totalSeconds.current;
+                      const totalWidth = numMergedFrames.current;
+                      const left = Math.round(highlightedEvent.startTime / totalSec * totalWidth) + resizedW / 2;
+                      const right = Math.round(highlightedEvent.endTime / totalSec * totalWidth) + resizedW / 2;
+                      const width = right - left;
+                      return (
+                        <>
+                          <div key="highlighted-in-energy-graph"
+                               className="absolute top-[82px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                               style={{ left: `${left}px`, width: `${width}px` }}/>
+                          <div key="highlighted-in-3d-view-graph"
+                               className="absolute top-[246px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                               style={{ left: `${left - resizedW / 2}px`, width: `${width + resizedW}px` }}/>
+                        </>
 
-                    );
-                  })()
-                }
-                { // 3. Current Playback Position Indicator
-                  (currentSecond !== undefined) && (() => {
-                    const totalSec = totalSeconds.current;
-                    const totalWidth = numMergedFrames.current;
-                    const left = Math.round(currentSecond / totalSec * totalWidth + resizedW / 2);
-                    return (
-                      <>
-                        <div
-                          key="currentTime"
-                          className="absolute top-[82px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
-                          style={{ left: `${left}px` }}
-                        />
-                        <div
-                          key="currentTimeFrame"
-                          className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
-                          style={{ left: `${left - resizedW / 2}px` }}
-                        />
-                      </>
-                    );
-                  })()
-                }
-                { // 4. Cursor Position Indicator
-                  (cursorPosSeconds !== null) && (highlightedEvent === null) && (() => {
-                    const totalSec = totalSeconds.current;
-                    const totalWidth = numMergedFrames.current;
-                    const left = Math.round(cursorPosSeconds / totalSec * totalWidth + resizedW / 2);
-                    return (
-                      <>
-                        <div
-                          key="cursorTime"
-                          className="absolute top-[0px] h-[246px] w-[2px] rounded-t bg-white opacity-50"
-                          style={{ left: `${left}px` }}
-                        />
-                        <div
-                          key="cursorTimeFrame"
-                          className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-white opacity-50"
-                          style={{ left: `${left - resizedW / 2}px` }}
-                        />
-                      </>
-                    );
-                  })()
-                }
-              </>
+                      );
+                    })()
+                  }
+                  { // 3. Current Playback Position Indicator
+                    (currentSecond !== undefined) && (() => {
+                      const totalSec = totalSeconds.current;
+                      const totalWidth = numMergedFrames.current;
+                      const left = Math.round(currentSecond / totalSec * totalWidth + resizedW / 2);
+                      return (
+                        <>
+                          <div
+                            key="currentTime"
+                            className="absolute top-[82px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
+                            style={{ left: `${left}px` }}
+                          />
+                          <div
+                            key="currentTimeFrame"
+                            className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                            style={{ left: `${left - resizedW / 2}px` }}
+                          />
+                        </>
+                      );
+                    })()
+                  }
+                  { // 4. Cursor Position Indicator
+                    (cursorPosSeconds !== null) && (highlightedEvent === null) && (() => {
+                      const totalSec = totalSeconds.current;
+                      const totalWidth = numMergedFrames.current;
+                      const left = Math.round(cursorPosSeconds / totalSec * totalWidth + resizedW / 2);
+                      return (
+                        <>
+                          <div
+                            key="cursorTime"
+                            className="absolute top-[0px] h-[246px] w-[2px] rounded-t bg-white opacity-50"
+                            style={{ left: `${left}px` }}
+                          />
+                          <div
+                            key="cursorTimeFrame"
+                            className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-white opacity-50"
+                            style={{ left: `${left - resizedW / 2}px` }}
+                          />
+                        </>
+                      );
+                    })()
+                  }
+                </>
+              </div>
             </div>
+            <div className="border border-gray-600 graph-separator"/> {/* Separator */}
+            <div className="h-20"><canvas id="energy-graph-canvas" width="3600" height="80"></canvas></div>
+            <div className="border border-gray-600 graph-separator"/> {/* Separator */}
+            <div className="h-20"><canvas id="thumbnails-graph-canvas" width="300" height="80"></canvas></div>
+            <div className="border border-gray-600 graph-separator"/> {/* Separator */}
+            <div className="h-20"><canvas id="3d-view-graph-canvas" width="3600" height="80"></canvas></div>
           </div>
-          <div className="border border-gray-600 graph-separator"/> {/* Separator */}
-          <div className="h-20"><canvas id="energy-graph-canvas" width="3600" height="80"></canvas></div>
-          <div className="border border-gray-600 graph-separator"/> {/* Separator */}
-          <div className="h-20"><canvas id="thumbnails-graph-canvas" width="300" height="80"></canvas></div>
-          <div className="border border-gray-600 graph-separator"/> {/* Separator */}
-          <div className="h-20"><canvas id="3d-view-graph-canvas" width="3600" height="80"></canvas></div>
         </div>
       </div>
     </div>
