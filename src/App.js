@@ -343,7 +343,7 @@ function App() {
 
 
   return (
-    <div className="h-dvh flex flex-col bg-gray-900 max-w-screen-xl mx-auto">
+    <div className="h-dvh flex flex-col bg-gray-900 max-w-screen-xl mx-auto select-none">
 
       {/* Serve as background */}
       <div className="absolute top-0 left-0 w-full h-full bg-gray-900 -z-10"/>
