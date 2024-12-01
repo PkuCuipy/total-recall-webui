@@ -352,7 +352,19 @@ function App() {
       <div className="flex-1 flex justify-center flex-row min-h-0 m-4 mb-0 gap-4">
         <EventsList
           events={events}
-          seekTo={seekToRef.current}
+          seekTo={(sec) => {
+            if (seekToRef.current) {
+              // 1. Seek to the specified time
+              seekToRef.current(sec);
+              // 2. Scroll to the current playback position
+              setTimeout(() => {
+                const indicator = document.getElementById("current-playback-position-indicator");
+                if (indicator) {
+                  indicator.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+              }, 100);
+            }
+          }}
         />
         <VideoPlayer
           videoUrl={videoUrl}
@@ -488,6 +500,7 @@ function App() {
                         <>
                           <div
                             key="currentTime"
+                            id="current-playback-position-indicator"
                             className="absolute top-[81px] h-[165px] w-[2px] rounded-t bg-yellow-400 opacity-60"
                             style={{ left: `${left}px` }}
                           />
