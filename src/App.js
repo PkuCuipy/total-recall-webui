@@ -448,7 +448,7 @@ function App() {
                       return (
                         <div
                           key={idx}
-                          className="absolute top-[15px] w-[50px] h-[50px] text-2xl rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
+                          className="absolute top-[15px] w-[50px] h-[50px] text-2xl rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 z-10 "
                           style={{ left: `${left}px` }}
                           onMouseOver={() => setHighlightedEvent(event)}
                           onMouseOut={() => setHighlightedEvent(null)}
