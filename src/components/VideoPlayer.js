@@ -41,7 +41,7 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
   // 清理函数
   useEffect(() => {
     // setVideoUrl("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");  // FIXME: FOR DEBUG
-    setVideoUrl("https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm");  // FIXME: FOR DEBUG
+    // setVideoUrl("https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm");  // FIXME: FOR DEBUG
     return () => {
       if (videoUrl) {
         console.warn("Revoke URL:", videoUrl);
