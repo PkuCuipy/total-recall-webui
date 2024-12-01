@@ -1,4 +1,3 @@
-import './App.css';
 import VideoPlayer from './components/VideoPlayer';
 import EventsList from './components/EventsList';
 import {useEffect, useState, useRef} from "react";
@@ -397,13 +396,16 @@ function App() {
                     const middle = Math.round((event.startTime + event.endTime) / 2 / totalSec * totalWidth) + resizedW / 2;
                     const left = middle - 25;
                     return (
-                      <div key={idx}
-                           className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
-                           style={{ left: `${left}px` }}
-                           onMouseOver={() => setHighlightedEvent(event)}
-                           onMouseOut={() => setHighlightedEvent(null)}
-                           onClick={() => {seekToRef.current && seekToRef.current(event.startTime)}}
-                      >{event.type.charAt(0)}</div>
+                      <div
+                        key={idx}
+                        className="absolute top-[15px] w-[50px] h-[50px] rounded-full border-2 flex justify-center items-center bg-gray-400 cursor-pointer select-none opacity-90 hover:opacity-100 hover:z-10 "
+                        style={{ left: `${left}px` }}
+                        onMouseOver={() => setHighlightedEvent(event)}
+                        onMouseOut={() => setHighlightedEvent(null)}
+                        onClick={() => {seekToRef.current && seekToRef.current(event.startTime)}}
+                      >
+                        {[...event.type][0]}    {/* This is a trick to get the first character that also works for emojis */}
+                      </div>
                     );
                   })
                 }

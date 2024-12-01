@@ -84,8 +84,8 @@ const proposeWorkerCode = () => {
 
     // Add `type`, `title`, `description` fields
     events = events.map(({ startTime, endTime }, idx) => ({
-      type: 'Type',
-      title: `Event Found ${idx + 1}`,
+      type: '⋯',
+      title: `Event ${idx + 1}`,
       description: '',
       startTime: startTime,
       endTime: endTime,
