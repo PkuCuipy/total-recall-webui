@@ -27,6 +27,7 @@ function App() {
   const [videoUrl, setVideoUrl] = useState(null);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
   const [events, setEvents] = useState([]);
+  const [cursorPosSeconds, setCursorPosSeconds] = useState(null);
   const [highlightedEvent, setHighlightedEvent] = useState(null);
   const [currentSecond, setCurrentSecond] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState(0);
@@ -40,6 +41,7 @@ function App() {
 
   // Store the function to seek to a specific time
   const seekToRef = useRef(null);
+  const togglePlayRef = useRef(null);
 
   // Workers
   const ffmpegRef = useRef(null);
@@ -322,19 +324,18 @@ function App() {
   }, [videoUrl]);
 
 
-  /* Support Mouse Horizontal Scroll w/o Pressing Shift */
+  // Keyboard Controls
   useEffect(() => {
-    let graphsDiv = document.getElementsByClassName("horizontal-scroll");
-    if (graphsDiv.length !== 1) {
-      alert("There should be only one horizontal-scroll div")
-    }
-    graphsDiv = graphsDiv[0];
-    graphsDiv.addEventListener("wheel", (e) => {
-      const delta = e.deltaY;
-      if (Math.abs(delta) >= 50) {    // a workaround to detect mouse or trackpad
-        graphsDiv.scrollLeft += delta;
+    const handleKeyDown = (e) => {
+      console.log("Keydown", e.key);
+      if (e.key === ' ') {
+        togglePlayRef.current && togglePlayRef.current();
       }
-    });
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
 
 
@@ -354,6 +355,7 @@ function App() {
           videoUrl={videoUrl}
           setVideoUrl={setVideoUrl}
           seekToRef={seekToRef}
+          togglePlayRef={togglePlayRef}
           setCurrentSecond={setCurrentSecond}
         />
       </div>
@@ -387,7 +389,39 @@ function App() {
         </div>
 
         {/* Right Graphs (sharing the same scroll bar) */}
-        <div className="flex-1 overflow-x-scroll no-scrollbar horizontal-scroll">
+        <div
+          className="flex-1 overflow-x-scroll no-scrollbar cursor-pointer"
+          onWheel={(e) => {  // large y-axis scroll likely caused by mouse wheel
+            if (Math.abs(e.deltaY) >= 50) {
+              e.currentTarget.scrollLeft += (e.deltaY);
+            }
+          }}
+          onMouseMove={(e) => {   // Handle cursor movement in timeline
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const totalSec = totalSeconds.current;
+            const totalWidth = numMergedFrames.current;
+            const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
+            setCursorPosSeconds(currentCursorSec);
+            // Seek to the cursor position if left-pressed
+            if (seekToRef.current && e.buttons === 1) {
+              console.log(e.button, e.buttons);
+              seekToRef.current(currentCursorSec);
+            }
+          }}
+          onMouseLeave={() => setCursorPosSeconds(null)}
+          onMouseDown={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const totalSec = totalSeconds.current;
+            const totalWidth = numMergedFrames.current;
+            const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
+            setCursorPosSeconds(currentCursorSec);
+            if (seekToRef.current) {
+              seekToRef.current(currentCursorSec);
+            }
+          }}
+        >
           <div className="h-20">
             <div id="events-graph" className="flex flex-row bg-gray-800 h-full relative">
               <>
@@ -435,7 +469,7 @@ function App() {
                   (currentSecond !== undefined) && (() => {
                     const totalSec = totalSeconds.current;
                     const totalWidth = numMergedFrames.current;
-                    const left = Math.round(currentSecond / totalSec * totalWidth) + resizedW / 2;
+                    const left = Math.round(currentSecond / totalSec * totalWidth + resizedW / 2);
                     return (
                       <>
                         <div
@@ -446,6 +480,27 @@ function App() {
                         <div
                           key="currentTimeFrame"
                           className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                          style={{ left: `${left - resizedW / 2}px` }}
+                        />
+                      </>
+                    );
+                  })()
+                }
+                { // 4. Cursor Position Indicator
+                  (cursorPosSeconds !== null) && (highlightedEvent === null) && (() => {
+                    const totalSec = totalSeconds.current;
+                    const totalWidth = numMergedFrames.current;
+                    const left = Math.round(cursorPosSeconds / totalSec * totalWidth + resizedW / 2);
+                    return (
+                      <>
+                        <div
+                          key="cursorTime"
+                          className="absolute top-[0px] h-[240px] w-[2px] rounded bg-white opacity-50"
+                          style={{ left: `${left}px` }}
+                        />
+                        <div
+                          key="cursorTimeFrame"
+                          className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-white opacity-50"
                           style={{ left: `${left - resizedW / 2}px` }}
                         />
                       </>

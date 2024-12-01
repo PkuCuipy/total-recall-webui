@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 
-const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, setCurrentSecond }) => {
+const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurrentSecond }) => {
 
   const videoRef = useRef(null);
 
@@ -20,6 +20,17 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, setCurrentSecond }) => 
   };
   seekToRef.current = seekTo;
 
+  const togglePlay = () => {
+    if (videoRef.current) {
+      if (videoRef.current.paused) {
+        videoRef.current.play();
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }
+  togglePlayRef.current = togglePlay;
+
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const time = videoRef.current.currentTime;
@@ -30,7 +41,7 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, setCurrentSecond }) => 
   // 清理函数
   useEffect(() => {
     // setVideoUrl("http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4");  // FIXME: FOR DEBUG
-    // setVideoUrl("https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm");  // FIXME: FOR DEBUG
+    setVideoUrl("https://raw.githubusercontent.com/ffmpegwasm/testdata/master/Big_Buck_Bunny_180_10s.webm");  // FIXME: FOR DEBUG
     return () => {
       if (videoUrl) {
         console.warn("Revoke URL:", videoUrl);
