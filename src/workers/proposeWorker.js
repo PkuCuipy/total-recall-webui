@@ -82,13 +82,14 @@ const proposeWorkerCode = () => {
     // Sort by start time for final output
     events.sort((a, b) => a.startTime - b.startTime);
 
-    // Add `type`, `title`, `description` fields
+    // Append default values for events
     events = events.map(({ startTime, endTime }, idx) => ({
       type: '⋯',
       title: `Event ${idx + 1}`,
       description: '',
       startTime: startTime,
       endTime: endTime,
+      tags: ["No tags"],
     }));
 
     // console.log('Events ready', events);

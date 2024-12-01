@@ -57,11 +57,12 @@ const fetchEventDetails = async (videoBlob, eventIndex) => {
     }
     
     const data = await response.json();
+    const tags = data.objects ?? data.tags ?? [];
     return {
-      type: data.type,
+      type: data.emoji ?? data.type,
       title: data.title,
       description: data.description,
-      objects: data.objects,
+      tags: tags.length !== 0 ? tags : ['No tags'],
     }
   } catch (error) {
     console.error(`Failed to get description for event ${eventIndex}:`, error);
@@ -91,13 +92,13 @@ const processEvent = async (event, eventID, ffmpeg, inputVideoName, updateEvent)
     updateEvent(eventID, event);
 
     // Fetch event details from backend API
-    const { type, title, description, objects } = await fetchEventDetails(videoBlob, eventID);
+    const { type, title, description, tags } = await fetchEventDetails(videoBlob, eventID);
     event = {
       ...event,
       type,
       title,
       description,
-      objects
+      tags,
     }
     updateEvent(eventID, event);
 
