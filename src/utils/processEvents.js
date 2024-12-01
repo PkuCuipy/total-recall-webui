@@ -84,22 +84,22 @@ const processEvent = async (event, eventID, ffmpeg, inputVideoName, updateEvent)
     // Extract thumbnail
     const midTime = (event.startTime + event.endTime) / 2;    // fixme: This can be changed to energy peak time
     const thumbnailURL = await extractFrameAsURL(ffmpeg, inputVideoName, midTime, 180, 320, eventID);
-    const eventWithThumbnail = {
+    event = {
       ...event,
       thumbnailURL,
     };
-    updateEvent(eventID, eventWithThumbnail);
+    updateEvent(eventID, event);
 
     // Fetch event details from backend API
     const { type, title, description, objects } = await fetchEventDetails(videoBlob, eventID);
-    const eventWithThumbnailAndDetails = {
-      ...eventWithThumbnail,
+    event = {
+      ...event,
       type,
       title,
       description,
       objects
     }
-    updateEvent(eventID, eventWithThumbnailAndDetails);
+    updateEvent(eventID, event);
 
   } catch (error) {
     console.error(`Failed to process event ${eventID}:`, error);
