@@ -125,7 +125,7 @@ const EventBlock = ({ event, seekTo }) => {
           {/* Middle Text*/}
           <div className="mr-1">
             <p className="text-md font-bold max-w-[160px] overflow-hidden whitespace-nowrap overflow-ellipsis">{event.title}</p>
-            <p className="text-sm max-w-[160px] overflow-hidden whitespace-nowrap overflow-ellipsis text-gray-500">{event.tags.join(", ")}</p> {/* FIXME: DEBUG */}
+            <p className="text-xs mb-[2px] max-w-[160px] overflow-hidden whitespace-nowrap overflow-ellipsis text-yellow-500">{event.tags.join(", ")}</p> {/* FIXME: DEBUG */}
             <p className="text-sm">{formatSeconds(event.startTime)}</p>
           </div>
           {/* Space */}

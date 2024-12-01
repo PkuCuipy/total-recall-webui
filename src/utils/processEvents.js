@@ -57,9 +57,10 @@ const fetchEventDetails = async (videoBlob, eventIndex) => {
     }
     
     const data = await response.json();
-    const tags = data.objects ?? data.tags ?? [];
+    const tags = data.objects ?? data.tags ?? [];  // backward compatibility
+    const type = data.emoji ?? data.type;          // backward compatibility
     return {
-      type: data.emoji ?? data.type,
+      type: type,
       title: data.title,
       description: data.description,
       tags: tags.length !== 0 ? tags : ['No tags'],

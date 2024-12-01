@@ -16,7 +16,7 @@ import { processEvents } from './utils/processEvents';
 const smooth = 5.0;
 const mergeEverySeconds = 0.5;
 const maxGap = 10;
-const maxNumEvents = 10;
+const maxNumEvents = 30;
 const paddingSeconds = 1;
 const minSeconds = paddingSeconds;
 const [resizedW, resizedH] = [80, 80];
@@ -395,7 +395,7 @@ function App() {
         </div>
 
         {/* Right Graphs (sharing the same scroll bar) */}
-        <div className="overflow-x-scroll no-scrollbar cursor-pointer">
+        <div className="overflow-x-scroll no-scrollbar cursor-pointer min-w-full">
           <div
             onWheel={(e) => {  // large y-axis scroll likely caused by mouse wheel
               if (Math.abs(e.deltaY) >= 50) {
@@ -488,12 +488,12 @@ function App() {
                         <>
                           <div
                             key="currentTime"
-                            className="absolute top-[82px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
+                            className="absolute top-[81px] h-[165px] w-[2px] rounded-t bg-yellow-400 opacity-60"
                             style={{ left: `${left}px` }}
                           />
                           <div
                             key="currentTimeFrame"
-                            className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                            className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-60"
                             style={{ left: `${left - resizedW / 2}px` }}
                           />
                         </>
