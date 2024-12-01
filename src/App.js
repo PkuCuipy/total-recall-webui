@@ -44,12 +44,12 @@ function App() {
   const togglePlayRef = useRef(null);
 
   // Workers
-  const ffmpegRef = useRef(null);
+  const ffmpegRef = useRef(new FFmpeg());   // not sure if this will cause memory leak
   const tensorWorkerRef = useRef(null);
   const plottingWorkerRef = useRef(null);
   const proposeWorkerRef = useRef(null);
   useEffect(() => {
-    ffmpegRef.current = new FFmpeg();
+    // ffmpegRef.current = new FFmpeg();
     tensorWorkerRef.current = new Worker(tensorWorkerURL);
     plottingWorkerRef.current = new Worker(plottingWorkerURL);
     proposeWorkerRef.current = new Worker(proposeWorkerURL);
@@ -211,12 +211,13 @@ function App() {
       const { type, data } = e.data;
 
       if (type === '3D_VIEW_GRAPH_READY') {
-        const { graph, height, width } = data;
+        const { graph, graphHeight, graphWidth } = data;
         const canvas = document.getElementById("3d-view-graph-canvas");
-        canvas.width = width;
+        [...document.getElementsByClassName("graph-separator")].forEach(sep => sep.style.width = `${graphWidth}px`);
+        canvas.width = graphWidth;
         const ctx = canvas.getContext("2d");
 
-        const imageData = new ImageData(width, height);
+        const imageData = new ImageData(graphWidth, graphHeight);
         for (let i = 0; i < graph.length; i++) {
           const val = graph[i];
           const idx = i * 4;
@@ -230,14 +231,11 @@ function App() {
       }
 
       else if (type === 'ENERGY_GRAPH_READY') {
-        const { graph, height, width } = data;
-
+        const { graph, graphHeight, graphWidth } = data;
         const canvas = document.getElementById("energy-graph-canvas");
-        canvas.width = width;
-        console.log("Energy Graph Width", width);
+        canvas.width = graphWidth;
         const ctx = canvas.getContext("2d");
-
-        const imageData = new ImageData(width, height);
+        const imageData = new ImageData(graphWidth, graphHeight);
         for (let i = 0; i < graph.length; i++) {
           const val = graph[i];
           const idx = i * 4;
@@ -246,15 +244,24 @@ function App() {
           imageData.data[idx + 2] = val; // B
           imageData.data[idx + 3] = 255; // A
         }
-
         ctx.putImageData(imageData, 0, 0);
       }
 
       else if (type === 'THUMBNAILS_GRAPH_READY') {
-        const { graph, height, width } = data;
+        const { graph, graphHeight, graphWidth } = data;
         const canvas = document.getElementById("thumbnails-graph-canvas");
-        canvas.width = width;
-        // TODO
+        canvas.width = graphWidth;
+        const ctx = canvas.getContext("2d");
+        const imageData = new ImageData(graphWidth, graphHeight);
+        for (let i = 0; i < graph.length; i++) {
+          const val = graph[i];
+          const idx = i * 4;
+          imageData.data[idx] = val;     // R
+          imageData.data[idx + 1] = val; // G
+          imageData.data[idx + 2] = val; // B
+          imageData.data[idx + 3] = 255; // A
+        }
+        ctx.putImageData(imageData, 0, 0);
       }
 
       else {
@@ -277,13 +284,9 @@ function App() {
 
         // Function to update a single event
         const updateEvent = (index, updatedEvent) => {
-          setEvents(currentEvents => {
-            console.log("currentEvents", currentEvents);
-            return currentEvents.map((event, i) =>
-              i === index ? updatedEvent : event
-            );
-          });
-
+          setEvents(currentEvents =>
+            currentEvents.map((event, i) => i === index ? updatedEvent : event)
+          );
         };
 
         // Start processing events
@@ -360,7 +363,7 @@ function App() {
         />
       </div>
       {/* Lower Part */}
-      <div className="min-w-[48rem] bg-gray-700 flex flex-row m-4 rounded-xl border-2 border-gray-500 overflow-hidden relative">
+      <div className="min-w-[48rem] bg-gray-800 flex flex-row m-4 rounded-xl border-2 border-gray-500 overflow-hidden relative">
 
         {/* Loading Placeholder */}
         {(loadingProgress < 99.9) && (
@@ -381,16 +384,19 @@ function App() {
         }
 
         {/* Left Tags */}
-        <div>
-          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-200">Events</div></div>
-          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-300">Energies</div></div>
-          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-400">Thumbnails</div></div>
-          <div className="h-20 flex flex-row"><div className="w-36 overflow-auto flex justify-center items-center bg-blue-500">3D View</div></div>
+        <div className="w-36 bg-gray-800 text-gray-400 text-md font-bold shadow-md shadow-gray-950 z-10">
+          <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">Events</div></div>
+          <div className="border border-gray-700"/> {/* Separator */}
+          <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">Energies</div></div>
+          <div className="border border-gray-700"/> {/* Separator */}
+          <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">Thumbnails</div></div>
+          <div className="border border-gray-700"/> {/* Separator */}
+          <div className="h-20 flex flex-row border-r-2 border-gray-700"><div className="w-36 overflow-auto flex justify-center items-center">3D View</div></div>
         </div>
 
         {/* Right Graphs (sharing the same scroll bar) */}
         <div
-          className="flex-1 overflow-x-scroll no-scrollbar cursor-pointer"
+          className="flex-1 overflow-x-scroll no-scrollbar cursor-pointer flex flex-col"
           onWheel={(e) => {  // large y-axis scroll likely caused by mouse wheel
             if (Math.abs(e.deltaY) >= 50) {
               e.currentTarget.scrollLeft += (e.deltaY);
@@ -403,10 +409,13 @@ function App() {
             const totalWidth = numMergedFrames.current;
             const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
             setCursorPosSeconds(currentCursorSec);
-            // Seek to the cursor position if left-pressed
+            // Also seek to the cursor position if left mouse button is pressed
             if (seekToRef.current && e.buttons === 1) {
-              console.log(e.button, e.buttons);
-              seekToRef.current(currentCursorSec);
+              if (highlightedEvent === null) {
+                seekToRef.current(currentCursorSec);
+              } else {
+                seekToRef.current(highlightedEvent.startTime);
+              }
             }
           }}
           onMouseLeave={() => setCursorPosSeconds(null)}
@@ -418,7 +427,11 @@ function App() {
             const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
             setCursorPosSeconds(currentCursorSec);
             if (seekToRef.current) {
-              seekToRef.current(currentCursorSec);
+              if (highlightedEvent === null) {
+                seekToRef.current(currentCursorSec);
+              } else {
+                seekToRef.current(highlightedEvent.startTime);
+              }
             }
           }}
         >
@@ -455,10 +468,10 @@ function App() {
                     return (
                       <>
                         <div key="highlighted-in-energy-graph"
-                             className="absolute top-[80px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                             className="absolute top-[82px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
                              style={{ left: `${left}px`, width: `${width}px` }}/>
                         <div key="highlighted-in-3d-view-graph"
-                             className="absolute top-[240px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                             className="absolute top-[246px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
                              style={{ left: `${left - resizedW / 2}px`, width: `${width + resizedW}px` }}/>
                       </>
 
@@ -474,12 +487,12 @@ function App() {
                       <>
                         <div
                           key="currentTime"
-                          className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
+                          className="absolute top-[82px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
                           style={{ left: `${left}px` }}
                         />
                         <div
                           key="currentTimeFrame"
-                          className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                          className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
                           style={{ left: `${left - resizedW / 2}px` }}
                         />
                       </>
@@ -495,12 +508,12 @@ function App() {
                       <>
                         <div
                           key="cursorTime"
-                          className="absolute top-[0px] h-[240px] w-[2px] rounded bg-white opacity-50"
+                          className="absolute top-[0px] h-[246px] w-[2px] rounded-t bg-white opacity-50"
                           style={{ left: `${left}px` }}
                         />
                         <div
                           key="cursorTimeFrame"
-                          className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-white opacity-50"
+                          className="absolute top-[246px] h-[80px] w-[80px] rounded border-2 border-white opacity-50"
                           style={{ left: `${left - resizedW / 2}px` }}
                         />
                       </>
@@ -510,8 +523,11 @@ function App() {
               </>
             </div>
           </div>
+          <div className="border border-gray-700 graph-separator"/> {/* Separator */}
           <div className="h-20"><canvas id="energy-graph-canvas" width="3600" height="80"></canvas></div>
+          <div className="border border-gray-700 graph-separator"/> {/* Separator */}
           <div className="h-20"><canvas id="thumbnails-graph-canvas" width="300" height="80"></canvas></div>
+          <div className="border border-gray-700 graph-separator"/> {/* Separator */}
           <div className="h-20"><canvas id="3d-view-graph-canvas" width="3600" height="80"></canvas></div>
         </div>
       </div>

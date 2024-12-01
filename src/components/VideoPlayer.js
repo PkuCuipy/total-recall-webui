@@ -74,6 +74,7 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
             src={videoUrl}
             onTimeUpdate={handleTimeUpdate}
             controls={true}
+            autoPlay={true}
           />
         )
       }

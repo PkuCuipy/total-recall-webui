@@ -43,9 +43,6 @@ const extractVideoClipBlob = async (ffmpeg, inputVideoName, startTime, endTime, 
 
 // Fetch description from backend
 const fetchEventDetails = async (videoBlob, eventIndex) => {
-
-  console.warn(`Fetching description for event ${eventIndex}...`);
-
   const formData = new FormData();
   formData.append('video', videoBlob, `event_${eventIndex}.mp4`);
   
