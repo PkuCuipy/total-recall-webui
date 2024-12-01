@@ -1,6 +1,11 @@
+// Extract a video frame
+const extractFrame = async (ffmpeg, inputVideoName, timeInSeconds, resizedH, resizedW) => {
+  // TODO
+}
+
 
 // Extract a video clip
-const extractClip = async (ffmpeg, inputVideoName, startTime, endTime, eventIndex) => {
+const extractVideoClipBlob = async (ffmpeg, inputVideoName, startTime, endTime, eventIndex) => {
   const outputName = `event_${eventIndex}.mp4`;
   try {
     await ffmpeg.exec([
@@ -22,15 +27,6 @@ const extractClip = async (ffmpeg, inputVideoName, startTime, endTime, eventInde
 
 // Fetch description from backend
 const fetchEventTitleAndDescription = async (videoBlob, eventIndex) => {
-
-  // // DEBUG: Simulate processing
-  // await new Promise(resolve => setTimeout(resolve, 5000 * Math.random()));
-  // return {
-  //   type: "ABCDEFGHIJKLMNOPQRSTUVWXYZ".charAt(Math.floor(Math.random() * 26)),
-  //   title: `Event ${eventIndex}`,
-  //   description: 'Random Description'
-  // };
-
   const formData = new FormData();
   formData.append('video', videoBlob, `event_${eventIndex}.mp4`);
   
@@ -48,7 +44,8 @@ const fetchEventTitleAndDescription = async (videoBlob, eventIndex) => {
     return {
       type: data.type,
       title: data.title,
-      description: data.description
+      description: data.description,
+      objects: data.objects,
     }
   } catch (error) {
     console.error(`Failed to get description for event ${eventIndex}:`, error);
@@ -58,50 +55,45 @@ const fetchEventTitleAndDescription = async (videoBlob, eventIndex) => {
 
 
 // Process single event and update state
-const processEvent = async (event, index, ffmpeg, inputVideoName, updateEvent) => {
+const processEvent = async (event, eventID, ffmpeg, inputVideoName, updateEvent) => {
   try {
-    // Extract clip
-    const videoBlob = await extractClip(
+    const videoBlob = await extractVideoClipBlob(
       ffmpeg, 
       inputVideoName,
       event.startTime,
       event.endTime,
-      index
+      eventID
     );
-
-    // Get description and update immediately when received
-    const { type, title, description } = await fetchEventTitleAndDescription(videoBlob, index);
-    updateEvent(index, {
+    const { type, title, description, objects } = await fetchEventTitleAndDescription(videoBlob, eventID);
+    updateEvent(eventID, {
       ...event,
       type,
       title,
       description,
-      clipBlob: videoBlob,
+      objects,
     });
-
   } catch (error) {
-    console.error(`Failed to process event ${index}:`, error);
-    updateEvent(index, {
+    console.error(`Failed to process event ${eventID}:`, error);
+    updateEvent(eventID, {
       ...event,
       type: '⚠',
-      title: 'Error',
-      description: 'Failed to process event',
+      title: '(Error) ' + event.title,
+      description: 'Failed to generate description for this event',
       error: error.message,
     });
   }
 };
 
 
-// Main function to process all events
+// Process all events
 export const processEvents = (events, ffmpeg, inputVideoName, updateEvent) => {
-  // Start processing all events in parallel
   events.forEach((event, index) => {
     // Mark event as processing
     updateEvent(index, {
       ...event,
-      description: 'Processing...'
+      title: 'Generating Title...',
+      description: 'Generating Description...',
     });
-
     // Process each event asynchronously
     processEvent(event, index, ffmpeg, inputVideoName, updateEvent);
   });

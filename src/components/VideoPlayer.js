@@ -1,12 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
 
-const VideoPlayer = ({ setVideoUrl, videoUrl, setSeekTo, setCurrentSecond }) => {
+const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, setCurrentSecond }) => {
 
   const videoRef = useRef(null);
 
-  console.warn("VideoPlayer is rendered");
-
-  // 处理文件选择上传
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file && file.type.startsWith('video/')) {
@@ -16,15 +13,13 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, setSeekTo, setCurrentSecond }) => 
     }
   };
 
-  // 跳转到指定时间
   const seekTo = (timeInSeconds) => {
     if (videoRef.current) {
       videoRef.current.currentTime = timeInSeconds;
     }
   };
-  setSeekTo(seekTo);
+  seekToRef.current = seekTo;
 
-  // 监听视频时间更新
   const handleTimeUpdate = () => {
     if (videoRef.current) {
       const time = videoRef.current.currentTime;

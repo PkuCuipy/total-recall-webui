@@ -13,6 +13,16 @@ import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { processEvents } from './utils/processEvents';
 
 
+// Constants
+const smooth = 5.0;
+const mergeEverySeconds = 0.5;
+const maxGap = 10;
+const maxNumEvents = 10;
+const paddingSeconds = 1;
+const minSeconds = paddingSeconds;
+const [resizedW, resizedH] = [80, 80];
+
+
 function App() {
 
   const [videoUrl, setVideoUrl] = useState(null);
@@ -22,13 +32,21 @@ function App() {
   const [currentSecond, setCurrentSecond] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
-  const seekToRef = useRef(undefined);
+  // Video metadata to be determined
+  const totalSeconds = useRef(undefined);
+  const oriVideoW = useRef(undefined);
+  const oriVideoH = useRef(undefined);
+  const oriVideoFps = useRef(undefined);
+  const numMergedFrames = useRef(undefined);
 
+  // Store the function to seek to a specific time
+  const seekToRef = useRef(null);
+
+  // Workers
   const ffmpegRef = useRef(null);
   const tensorWorkerRef = useRef(null);
   const plottingWorkerRef = useRef(null);
   const proposeWorkerRef = useRef(null);
-
   useEffect(() => {
     ffmpegRef.current = new FFmpeg();
     tensorWorkerRef.current = new Worker(tensorWorkerURL);
@@ -36,32 +54,15 @@ function App() {
     proposeWorkerRef.current = new Worker(proposeWorkerURL);
   }, []);
 
-
-  const totalSeconds = useRef(undefined);
-  const videoW = useRef(undefined);
-  const videoH = useRef(undefined);
-  const videoFps = useRef(undefined);
-  const numMergedFrames = useRef(undefined);
-
-
+  // Adjustable Parameters
   const amplify = 5.0;
   const power = 2.0;
-  const smooth = 5.0;
-
-  const maxNumEvents = 10;
-  const maxGap = 10;
-  const paddingSeconds = 1;
-  const minSeconds = paddingSeconds;
-
-
-  const [resizedW, resizedH] = [80, 80];
-
 
   // Load FFMpeg
   const loadFfmpeg = async () => {
     const ffmpeg = ffmpegRef.current;
 
-    // Set Video Metadata Callback
+    // Set FFMpeg Output Callback (useful for progress bar and video metadata)
     ffmpeg.on('log', ({message}) => {
       console.log(message);  // Log all FFMpeg messages
 
@@ -76,10 +77,10 @@ function App() {
 
       // Get video dimensions and FPS
       const streamMatch = message.match(/Stream.*Video.* (\d+)x(\d+)[^\n]*(?:, |\s)(\d+(?:\.\d+)?)\s*fps/i);
-      if (streamMatch && videoW.current === undefined) {
-        videoW.current = parseInt(streamMatch[1]);
-        videoH.current = parseInt(streamMatch[2]);
-        videoFps.current = parseFloat(streamMatch[3]);
+      if (streamMatch && oriVideoW.current === undefined) {
+        oriVideoW.current = parseInt(streamMatch[1]);
+        oriVideoH.current = parseInt(streamMatch[2]);
+        oriVideoFps.current = parseFloat(streamMatch[3]);
       }
 
       // Progress Bar
@@ -90,10 +91,8 @@ function App() {
         const seconds = parseFloat(progressMatch[3]);
         const currentTime = hours * 3600 + minutes * 60 + seconds;
         const percent = Math.round(currentTime / totalSeconds.current * 1000) / 10;
-        // console.warn(`Progress: ${percent}%`);
         setLoadingProgress(percent);
       }
-
     });
 
     // Load FFMpeg Core
@@ -114,39 +113,36 @@ function App() {
   // Convert Video URL to Uint8Array
   //   Input: videoURL
   //   Return: Uint8Array
-
   const videoURLToU1Array = async (videoURL) => {
     const ffmpeg = ffmpegRef.current;
     await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
-    // Extract frames directly to raw format
     await ffmpeg.exec([
       '-i', 'input.mp4',
       '-vf', `scale=${resizedW}:${resizedH},format=gray`,
-      '-f', 'rawvideo',     // Output raw video format
+      '-f', 'rawvideo',     // Extract to raw video format
       '-pix_fmt', 'gray',   // Use grayscale pixel format
       'output.raw'
     ]);
     const frameData = await ffmpeg.readFile('output.raw');
     const u1array = new Uint8Array(frameData.buffer);
-
     return u1array;
   };
 
 
+  // When videoURL and FFMpeg are ready, process video to (N, H, W, 3) array
   useEffect(() => {
     if (!ffmpegLoaded || !videoUrl) {
       return;
     }
-    // When VideoURL and FFMpeg are ready
     videoURLToU1Array(videoUrl)
       .then((u1arr) => {
         console.log("Video to U1Array Done", u1arr);
-
         tensorWorkerRef.current.postMessage({
           type: 'CONVERT_FRAMES',
           data: {
             framesU1Array: u1arr,
-            mergeEvery: Math.ceil(videoFps.current / 3),
+            // e.g. merge every 0.3s for a 30fps video means merge every 9 frames
+            mergeEvery: Math.ceil(oriVideoFps.current * mergeEverySeconds),
             height: resizedH,
             width: resizedW,
             amp: amplify,
@@ -155,7 +151,6 @@ function App() {
           }
         });
       });
-
   }, [ffmpegLoaded, videoUrl]);
 
 
@@ -194,7 +189,7 @@ function App() {
           frames: frames,
           height: resizedH,
           width: resizedW,
-          aspectRatio: videoW.current / videoH.current,
+          aspectRatio: oriVideoW.current / oriVideoH.current,
         }
       });
       // Propose Events
@@ -274,14 +269,8 @@ function App() {
       if (type === 'PROPOSED_EVENTS_READY') {
         console.log("Proposed Events", data);
 
-        // Initialize events with processing status
-        const initialEvents = data.events.map(event => ({
-          ...event,
-          title: 'pending',
-          description: 'Pending...'
-        }));
-
-        setEvents(initialEvents);
+        const proposedEvents = data.events;
+        setEvents(proposedEvents);
         const eventsGraphDiv = document.getElementById("events-graph");
         eventsGraphDiv.style.width = `${numMergedFrames.current + resizedW - 1}px`;
 
@@ -295,7 +284,7 @@ function App() {
         };
 
         // Start processing events
-        processEvents(initialEvents, ffmpegRef.current, 'input.mp4', updateEvent);
+        processEvents(proposedEvents, ffmpegRef.current, 'input.mp4', updateEvent);
       } else {
         console.error("Unknown ProposeWorker message", e.data);
       }
@@ -309,7 +298,7 @@ function App() {
     const View3DCanvas = document.getElementById("3d-view-graph-canvas");
     const View3DCtx = View3DCanvas.getContext("2d");
     View3DCtx.fillStyle = "#234";
-    View3DCtx.fillRect(0, 0, 3200, 80);
+    View3DCtx.fillRect(0, 0, 1000, 80);
     View3DCtx.fillStyle = "#FFF";
     View3DCtx.font = "20px Arial";
     View3DCtx.fillText(videoUrl ? "Loading 3D View Graph ..." : "3D View Graph (No Video Loaded)", 20, 45);
@@ -317,7 +306,7 @@ function App() {
     const energyCanvas = document.getElementById("energy-graph-canvas");
     const energyCtx = energyCanvas.getContext("2d");
     energyCtx.fillStyle = "#456";
-    energyCtx.fillRect(0, 0, 3000, 80);
+    energyCtx.fillRect(0, 0, 1000, 80);
     energyCtx.fillStyle = "#FFF";
     energyCtx.font = "20px Arial";
     energyCtx.fillText(videoUrl ? "Loading Energy Graph ..." : "Energy Graph (No Video Loaded)", 20, 45);
@@ -325,7 +314,7 @@ function App() {
     const ThumbnailsCanvas = document.getElementById("thumbnails-graph-canvas");
     const ThumbnailsCtx = ThumbnailsCanvas.getContext("2d");
     ThumbnailsCtx.fillStyle = "#345";
-    ThumbnailsCtx.fillRect(0, 0, 300, 80);
+    ThumbnailsCtx.fillRect(0, 0, 1000, 80);
     ThumbnailsCtx.fillStyle = "#FFF";
     ThumbnailsCtx.font = "20px Arial";
     ThumbnailsCtx.fillText(videoUrl ? "Loading Thumbnails Graph ..." : "Thumbnails Graph (No Video Loaded)", 20, 45);
@@ -363,7 +352,7 @@ function App() {
         <VideoPlayer
           videoUrl={videoUrl}
           setVideoUrl={setVideoUrl}
-          setSeekTo={(seekTo) => seekToRef.current = seekTo}
+          seekToRef={seekToRef}
           setCurrentSecond={setCurrentSecond}
         />
       </div>
@@ -413,10 +402,7 @@ function App() {
                            style={{ left: `${left}px` }}
                            onMouseOver={() => setHighlightedEvent(event)}
                            onMouseOut={() => setHighlightedEvent(null)}
-                           onClick={() => {
-                             seekToRef.current && seekToRef.current(event.startTime);
-                             console.log("Seek to", event.startTime);
-                           }}
+                           onClick={() => {seekToRef.current && seekToRef.current(event.startTime)}}
                       >{event.type.charAt(0)}</div>
                     );
                   })
@@ -448,16 +434,17 @@ function App() {
                     const left = Math.round(currentSecond / totalSec * totalWidth) + resizedW / 2;
                     return (
                       <>
-                        <div key="currentTime"
-                             className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
-                             style={{ left: `${left}px` }}
+                        <div
+                          key="currentTime"
+                          className="absolute top-[80px] h-[80px] w-[2px] rounded bg-yellow-400 opacity-50"
+                          style={{ left: `${left}px` }}
                         />
-                        <div key="currentTimeFrame"
-                             className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
-                             style={{ left: `${left - resizedW / 2}px` }}
+                        <div
+                          key="currentTimeFrame"
+                          className="absolute top-[240px] h-[80px] w-[80px] rounded border-2 border-yellow-400 opacity-50"
+                          style={{ left: `${left - resizedW / 2}px` }}
                         />
                       </>
-
                     );
                   })()
                 }

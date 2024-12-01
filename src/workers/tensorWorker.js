@@ -6,29 +6,27 @@
 
 const tensorWorkerCode = () => {
   importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js');
-  // tf.setBackend('cpu');    // fixme: don't know why this will cause but when calculate the energy, wrong result
-
 
   onmessage = async (e) => {
-
     console.warn('TensorWorker is called');
-
     const { type, data } = e.data;
 
     if (type === 'CONVERT_FRAMES') {
       const { framesU1Array, mergeEvery, height, width, amp, power, smooth } = data;
 
-      const nrFramesFull = framesU1Array.length / (height * width);
-      const nFrames = Math.floor(nrFramesFull / mergeEvery);
+      const nFramesOri = framesU1Array.length / (height * width);
+      const nFrames = Math.floor(nFramesOri / mergeEvery);
 
-      //// Pipeline:
-      //// U1Array -> tf.Tensor -> MergedFrames -> Diffs -> Opacity Masks -> Energies
+      /*
+       *  Pipeline:
+       *  U1Array -> tf.Tensor -> MergedFrames -> Diffs -> Opacity Masks -> Energies
+      */
 
       // U1Array -> tf.Tensor -> MergedFrames
       const frames = tf.tidy(() => {
         const framesTensor = tf.tensor3d(
           Float32Array.from(framesU1Array),
-          [nrFramesFull, height, width]
+          [nFramesOri, height, width]
         );
         return framesTensor
           .slice([0, 0, 0], [nFrames * mergeEvery, height, width])  // --> [nFrames * mergeEvery, height, width]
