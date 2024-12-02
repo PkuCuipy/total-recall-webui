@@ -14,7 +14,7 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
   };
 
   const seekTo = (timeInSeconds) => {
-    if (videoRef.current) {
+    if (videoRef.current && !isNaN(timeInSeconds)) {
       videoRef.current.currentTime = timeInSeconds;
     }
   };
