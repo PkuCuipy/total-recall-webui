@@ -9,20 +9,24 @@ const plottingWorkerCode = () => {
 
     if (type === 'MAKE_3D_VIEW') {
       const {frames, masks, height, width} = data;
-      const nFrames = frames.length / (height * width);
+      const nFrames = frames.length / (height * width * 3);
       const canvasW = nFrames + width - 1;
-      const canvasF32 = new Float32Array(height * canvasW);
+      const canvasF32 = new Float32Array(height * canvasW * 3);
       for (let i = 0; i < nFrames; i++) {
         for (let y = 0; y < height; y++) {
           for (let x = 0; x < width; x++) {
-            // frames[i][y][x])
-            // canvasU1[y][x + i]
-            const frameIdx = i * height * width + y * width + x;
-            const canvasIdx = y * canvasW + x + i;
-            const frameVal = frames[frameIdx];
-            const maskVal = masks[frameIdx];
-            const canvasVal = canvasF32[canvasIdx];
-            canvasF32[canvasIdx] = (1 - maskVal) * canvasVal + maskVal * frameVal;
+            for (let c = 0; c < 3; c++) {
+              // frames[i][y][x][c])
+              // masks[i][y][x]
+              // canvasF32[y][x + i][c]
+              const frameIdx = (i)*(height * width * 3) + (y)*(width * 3) + x*(3) + c;
+              const canvasIdx = (y) * (canvasW * 3) + (x + i) * (3) + c;
+              const maskIdx = (i)*(height * width) + (y)*(width) + x;
+              const frameVal = frames[frameIdx];
+              const maskVal = masks[maskIdx];
+              const canvasVal = canvasF32[canvasIdx];
+              canvasF32[canvasIdx] = (1 - maskVal) * canvasVal + maskVal * frameVal;
+            }
           }
         }
       }
@@ -64,21 +68,23 @@ const plottingWorkerCode = () => {
     }
 
     else if (type === 'MAKE_THUMBNAILS_GRAPH') {
-      console.warn('Making Thumbnails Graph...');
+      // console.warn('Making Thumbnails Graph...');
       const {frames, height, width, aspectRatio} = data;
-      const nFrames = frames.length / (height * width);
+      const nFrames = frames.length / (height * width * 3);
       const nThumbnails = Math.floor(nFrames / width) + 1;
       const canvasW = nFrames + width - 1;
-      const canvasU1 = new Uint8Array(height * canvasW);
+      const canvasU1 = new Uint8Array(height * canvasW * 3);
 
       for (let thumbnailIdx = 0; thumbnailIdx < nThumbnails; thumbnailIdx++) {
         for (let y = 0; y < height; y++) {
           for (let x = 0; x < width; x++) {
-            // canvasU1[y][x + thumbnailIdx * width]    shape=[height, canvasW]
-            // frames[thumbnailIdx * width][y][x]       shape=[nFrames, height, width]
-            const canvasIdx = y * (canvasW) + x + thumbnailIdx * width;
-            const frameIdx = thumbnailIdx * width * (height * width) + y * (width) + x;
-            canvasU1[canvasIdx] = frames[frameIdx];
+            for (let c = 0; c < 3; c++) {
+              // canvasU1[y][x + thumbnailIdx * width][c]    shape=[height, canvasW, 3]
+              // frames[thumbnailIdx * width][y][x][3]       shape=[nFrames, height, width, 3]
+              const canvasIdx = y * (canvasW * 3) + (x + thumbnailIdx * width) * 3 + c;
+              const frameIdx = thumbnailIdx * width * (height * width * 3) + y * (width * 3) + x * 3 + c;
+              canvasU1[canvasIdx] = frames[frameIdx];
+            }
           }
         }
       }

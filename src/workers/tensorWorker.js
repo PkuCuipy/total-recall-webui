@@ -14,7 +14,7 @@ const tensorWorkerCode = () => {
     if (type === 'CONVERT_FRAMES') {
       const { framesU1Array, mergeEvery, height, width, amp, power, smooth } = data;
 
-      const nFramesOri = framesU1Array.length / (height * width);
+      const nFramesOri = framesU1Array.length / (height * width * 3);
       const nFrames = Math.floor(nFramesOri / mergeEvery);
 
       /*
@@ -24,25 +24,25 @@ const tensorWorkerCode = () => {
 
       // U1Array -> tf.Tensor -> MergedFrames
       const frames = tf.tidy(() => {
-        const framesTensor = tf.tensor3d(
+        const framesTensor = tf.tensor4d(
           Float32Array.from(framesU1Array),
-          [nFramesOri, height, width]
+          [nFramesOri, height, width, 3]
         );
         return framesTensor
-          .slice([0, 0, 0], [nFrames * mergeEvery, height, width])  // --> [nFrames * mergeEvery, height, width]
-          .reshape([nFrames, mergeEvery, height, width])            // --> [nFrames, mergeEvery, height, width]
-          .mean(1);                                                 // --> [nFrames, height, width]
+          .slice([0, 0, 0, 0], [nFrames * mergeEvery, height, width, 3])  // --> [nFrames * mergeEvery, height, width, 3]
+          .reshape([nFrames, mergeEvery, height, width, 3])               // --> [nFrames, mergeEvery, height, width, 3]
+          .mean(1);                                                       // --> [nFrames, height, width, 3]
       });
 
       // MergedFrames -> Diffs -> Opacity Masks
       const masks = tf.tidy(() => {
         const len = frames.shape[0];
         const shiftRight = tf.concat([
-            frames.slice([0, 0, 0], [1,     -1, -1]),
-            frames.slice([0, 0, 0], [len-1, -1, -1])
+            frames.slice([0, 0, 0, 0], [1,     -1, -1, -1]),
+            frames.slice([0, 0, 0, 0], [len-1, -1, -1, -1])
           ], 0
         );
-        const diffs = tf.sub(frames, shiftRight).abs().pow(power);
+        const diffs = tf.sub(frames, shiftRight).abs().pow(power).mean(3);  // -> [nFrames, height, width]
         const maxDiff = tf.max(diffs);
         return diffs.div(maxDiff).mul(amp).clipByValue(0, 1);
       });

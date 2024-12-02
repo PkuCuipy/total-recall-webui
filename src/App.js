@@ -20,6 +20,7 @@ const maxNumEvents = 30;
 const paddingSeconds = 1;
 const minSeconds = paddingSeconds;
 const [resizedW, resizedH] = [80, 80];
+const chunkSize = 7000000;
 
 
 function App() {
@@ -119,13 +120,29 @@ function App() {
     await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
     await ffmpeg.exec([
       '-i', 'input.mp4',
-      '-vf', `scale=${resizedW}:${resizedH},format=gray`,
+      '-vf', `scale=${resizedW}:${resizedH},format=rgb24`,
       '-f', 'rawvideo',     // Extract to raw video format
-      '-pix_fmt', 'gray',   // Use grayscale pixel format
+      '-pix_fmt', 'rgb24',
       'output.raw'
     ]);
-    const frameData = await ffmpeg.readFile('output.raw');
-    return new Uint8Array(frameData.buffer);
+    const frameData = await ffmpeg.readFile('output.raw');    // -> Uint8Array
+
+    // Split the frame data into chunks
+    // Each chunk: [chunkSize, resizedW, resizedH, 3], note that the last chunk may be smaller!
+    const chunks = [];
+    const fps = oriVideoFps.current;
+    const mergedEvery = Math.ceil(fps * mergeEverySeconds);
+    const chunkSizeInFrames = chunkSize * mergedEvery;
+    const chunkSizeInBytes = chunkSizeInFrames * resizedW * resizedH * 3;
+    const numChunks = Math.ceil(frameData.length / chunkSizeInBytes);
+    for (let i = 0; i < numChunks; i++) {
+      const start = i * chunkSizeInBytes;
+      const end = Math.min((i + 1) * chunkSizeInBytes, frameData.length);
+      const chunk = frameData.slice(start, end);
+      chunks.push(chunk);
+    }
+    console.log("Chunks", chunks);
+    return chunks;
   };
 
 
@@ -135,8 +152,8 @@ function App() {
       return;
     }
     videoURLToU1Array(videoUrl)
-      .then((u1arr) => {
-        console.log("Video to U1Array Done", u1arr);
+      .then((chunks) => {
+        const u1arr = chunks[0];
         tensorWorkerRef.current.postMessage({
           type: 'CONVERT_FRAMES',
           data: {
@@ -150,6 +167,8 @@ function App() {
             smooth: smooth,
           }
         });
+
+
       });
   }, [ffmpegLoaded, videoUrl]);
 
@@ -217,13 +236,13 @@ function App() {
         const ctx = canvas.getContext("2d");
 
         const imageData = new ImageData(graphWidth, graphHeight);
-        for (let i = 0; i < graph.length; i++) {
-          const val = graph[i];
-          const idx = i * 4;
-          imageData.data[idx] = val;     // R
-          imageData.data[idx + 1] = val; // G
-          imageData.data[idx + 2] = val; // B
-          imageData.data[idx + 3] = 255; // A
+        const numPixels = graph.length / 3;
+        console.log(graph.length)
+        for (let i = 0; i < numPixels; i++) {
+          imageData.data[i * 4] = graph[i * 3];         // R
+          imageData.data[i * 4 + 1] = graph[i * 3 + 1]; // G
+          imageData.data[i * 4 + 2] = graph[i * 3 + 2]; // B
+          imageData.data[i * 4 + 3] = 255;              // A
         }
 
         ctx.putImageData(imageData, 0, 0);
@@ -252,13 +271,12 @@ function App() {
         canvas.width = graphWidth;
         const ctx = canvas.getContext("2d");
         const imageData = new ImageData(graphWidth, graphHeight);
-        for (let i = 0; i < graph.length; i++) {
-          const val = graph[i];
-          const idx = i * 4;
-          imageData.data[idx] = val;     // R
-          imageData.data[idx + 1] = val; // G
-          imageData.data[idx + 2] = val; // B
-          imageData.data[idx + 3] = 255; // A
+        const numPixels = graph.length / 3;
+        for (let i = 0; i < numPixels; i++) {
+          imageData.data[i * 4] = graph[i * 3];         // R
+          imageData.data[i * 4 + 1] = graph[i * 3 + 1]; // G
+          imageData.data[i * 4 + 2] = graph[i * 3 + 2]; // B
+          imageData.data[i * 4 + 3] = 255;              // A
         }
         ctx.putImageData(imageData, 0, 0);
       }
@@ -329,7 +347,6 @@ function App() {
   // Keyboard Controls
   useEffect(() => {
     const handleKeyDown = (e) => {
-      console.log("Keydown", e.key);
       if (e.key === ' ') {
         togglePlayRef.current && togglePlayRef.current();
       }
@@ -418,7 +435,6 @@ function App() {
             onMouseMove={(e) => {   // Handle cursor movement in timeline
               const rect = e.currentTarget.getBoundingClientRect();
               const x = e.clientX - rect.left;
-              console.log(e.clientX, rect.left, x);
               const totalSec = totalSeconds.current;
               const totalWidth = numMergedFrames.current;
               const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
