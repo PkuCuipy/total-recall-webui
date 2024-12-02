@@ -107,7 +107,7 @@ function App() {
 
   useEffect(() => {
     loadFfmpeg()
-      .then(r => console.log("FFMpeg Loaded"));
+      .then(() => console.log("FFMpeg Loaded"));
   }, []);
 
 
@@ -125,8 +125,7 @@ function App() {
       'output.raw'
     ]);
     const frameData = await ffmpeg.readFile('output.raw');
-    const u1array = new Uint8Array(frameData.buffer);
-    return u1array;
+    return new Uint8Array(frameData.buffer);
   };
 
 
