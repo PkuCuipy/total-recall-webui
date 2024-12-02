@@ -408,7 +408,7 @@ function App() {
         {/* Right Graphs (sharing the same scroll bar) */}
         <div
           id="graphs-container"
-          className="overflow-x-scroll no-scrollbar cursor-pointer min-w-full"
+          className="overflow-x-scroll no-scrollbar cursor-pointer flex-1"
         >
           <div
             onWheel={(e) => {  // large y-axis scroll likely caused by mouse wheel
