@@ -53,7 +53,7 @@ const EventsFilter = ({ events, deselectedTags, setDeselectedTags }) => {
       {/* Filter Header */}
       <div className="flex justify-between items-center gap-2 mx-4">
         <div className="flex-1 mt-2 mb-1 text-lg font-bold">
-          Show Events with
+          Event Tags Filter
         </div>
         <div onClick={() => setDeselectedTags([])} className="mt-2 mb-1 p-1 px-2 text-xs font-bold bg-gray-700 rounded-xl hover:bg-gray-600 cursor-pointer">
           Select All
@@ -119,7 +119,7 @@ const EventBlock = ({ event, seekTo }) => {
         ?
         <>
           {/* Left Icon*/}
-          <div className={`${textToColor(event.type)} w-[50px] h-[50px] mx-4 my-4 bg-gray-500 rounded-full flex items-center justify-center text-2xl`}>
+          <div className={`${textToColor(event.type)} text-red-600 w-[50px] h-[50px] mx-4 my-4 bg-gray-500 rounded-full flex items-center justify-center text-2xl`}>
             {event.type}
           </div>
           {/* Middle Text*/}
