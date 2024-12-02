@@ -14,7 +14,7 @@ import { processEvents } from './utils/processEvents';
 
 // Constants
 const smooth = 5.0;
-const mergeEverySeconds = 0.5;
+const mergeEverySeconds = 0.1;    // fixme: should be 0.5
 const maxGap = 10;
 const maxNumEvents = 30;
 const paddingSeconds = 1;
