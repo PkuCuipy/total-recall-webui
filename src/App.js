@@ -14,11 +14,12 @@ import { processEvents } from './utils/processEvents';
 
 // Constants
 const smooth = 5.0;
-const mergeEverySeconds = 0.1;    // fixme: should be 0.5
 const maxGap = 10;
 const maxNumEvents = 30;
 const paddingSeconds = 1;
 const minSeconds = paddingSeconds;
+const downsampledFPS = 1;
+const mergeEverySeconds = 1;
 const [resizedW, resizedH] = [80, 80];
 const chunkSize = 7000000;
 
@@ -116,22 +117,44 @@ function App() {
   //   Input: videoURL
   //   Return: Uint8Array
   const videoURLToU1Array = async (videoURL) => {
+
+    // const ffmpeg = ffmpegRef.current;
+    // await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
+    // await ffmpeg.exec([
+    //   '-i', 'input.mp4',
+    //   '-vf', `scale=${resizedW}:${resizedH},format=rgb24`,
+    //   '-f', 'rawvideo',     // Extract to raw video format
+    //   '-pix_fmt', 'rgb24',
+    //   'output.raw'
+    // ]);
+    // const frameData = await ffmpeg.readFile('output.raw');    // -> Uint8Array
+
+    // const ffmpeg = ffmpegRef.current;
+    // await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
+    // await ffmpeg.exec([
+    //   '-i', 'input.mp4',
+    //   '-vf', `tmix=frames=10:weights='1 1 1 1 1 1 1 1 1 1',scale=${resizedW}:${resizedH},format=rgb24`, // Blend 10 frames
+    //   '-f', 'rawvideo',
+    //   '-pix_fmt', 'rgb24',
+    //   'output.raw'
+    // ]);
+    // const frameData = await ffmpeg.readFile('output.raw');
+
     const ffmpeg = ffmpegRef.current;
     await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
     await ffmpeg.exec([
       '-i', 'input.mp4',
-      '-vf', `scale=${resizedW}:${resizedH},format=rgb24`,
-      '-f', 'rawvideo',     // Extract to raw video format
+      '-vf', `framerate=fps=${downsampledFPS},scale=${resizedW}:${resizedH},format=rgb24`,
+      '-f', 'rawvideo',
       '-pix_fmt', 'rgb24',
       'output.raw'
     ]);
-    const frameData = await ffmpeg.readFile('output.raw');    // -> Uint8Array
+    const frameData = await ffmpeg.readFile('output.raw');
 
     // Split the frame data into chunks
     // Each chunk: [chunkSize, resizedW, resizedH, 3], note that the last chunk may be smaller!
     const chunks = [];
-    const fps = oriVideoFps.current;
-    const mergedEvery = Math.ceil(fps * mergeEverySeconds);
+    const mergedEvery = Math.ceil(downsampledFPS * mergeEverySeconds);
     const chunkSizeInFrames = chunkSize * mergedEvery;
     const chunkSizeInBytes = chunkSizeInFrames * resizedW * resizedH * 3;
     const numChunks = Math.ceil(frameData.length / chunkSizeInBytes);
@@ -158,8 +181,7 @@ function App() {
           type: 'CONVERT_FRAMES',
           data: {
             framesU1Array: u1arr,
-            // e.g. merge every 0.3s for a 30fps video means merge every 9 frames
-            mergeEvery: Math.ceil(oriVideoFps.current * mergeEverySeconds),
+            mergeEvery: Math.ceil(downsampledFPS * mergeEverySeconds),   // e.g. merge every 0.3s for a 30fps video means merge every 9 frames
             height: resizedH,
             width: resizedW,
             amp: amplify,
@@ -167,8 +189,6 @@ function App() {
             smooth: smooth,
           }
         });
-
-
       });
   }, [ffmpegLoaded, videoUrl]);
 
@@ -561,11 +581,17 @@ function App() {
               </div>
             </div>
             <div className="border border-gray-600 graph-separator"/> {/* Separator */}
-            <div className="h-20"><canvas id="energy-graph-canvas" width="3600" height="80"></canvas></div>
+            <div className="h-20">
+              <canvas id="energy-graph-canvas" width="3600" height={resizedH}/>
+            </div>
             <div className="border border-gray-600 graph-separator"/> {/* Separator */}
-            <div className="h-20"><canvas id="thumbnails-graph-canvas" width="300" height="80"></canvas></div>
+            <div className="h-20">
+              <canvas id="thumbnails-graph-canvas" width="300" height={resizedH}/>
+            </div>
             <div className="border border-gray-600 graph-separator"/> {/* Separator */}
-            <div className="h-20"><canvas id="3d-view-graph-canvas" width="3600" height="80"></canvas></div>
+            <div className="h-20">
+              <canvas id="3d-view-graph-canvas" width="3600" height={resizedH}/>
+            </div>
           </div>
         </div>
       </div>

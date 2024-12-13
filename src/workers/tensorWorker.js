@@ -1,99 +1,124 @@
 /* eslint-disable no-restricted-globals */
 /* eslint-disable no-undef */
 
-// import * as tf from '@tensorflow/tfjs'; // fixme: only for syntax highlighting, remove before compile
-
-
 const tensorWorkerCode = () => {
-  importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js');
-
   onmessage = async (e) => {
     console.warn('TensorWorker is called', Date.now());
     const { type, data } = e.data;
 
     if (type === 'CONVERT_FRAMES') {
-      const { framesU1Array, mergeEvery, height, width, amp, power, smooth } = data;
+      const { framesU1Array, mergeEvery, height, width, amp, power, smooth} = data;
 
       const nFramesOri = framesU1Array.length / (height * width * 3);
       const nFrames = Math.floor(nFramesOri / mergeEvery);
 
       /*
        *  Pipeline:
-       *  U1Array -> tf.Tensor -> MergedFrames -> Diffs -> Opacity Masks -> Energies
+       *  framesU1Array -> mergedFrames -> Diffs -> opacityMasks -> Energies
       */
 
-      // U1Array -> tf.Tensor -> MergedFrames
-      const frames = tf.tidy(() => {
-        const framesTensor = tf.tensor4d(
-          Float32Array.from(framesU1Array),
-          [nFramesOri, height, width, 3]
-        );
-        return framesTensor
-          .slice([0, 0, 0, 0], [nFrames * mergeEvery, height, width, 3])  // --> [nFrames * mergeEvery, height, width, 3]
-          .reshape([nFrames, mergeEvery, height, width, 3])               // --> [nFrames, mergeEvery, height, width, 3]
-          .mean(1);                                                       // --> [nFrames, height, width, 3]
-      });
+      // framesU1Array --> mergedFrames
+      const mergedFrames = new Float32Array(nFrames * height * width * 3);
+      for (let f = 0; f < nFrames; f++) {
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            for (let c = 0; c < 3; c++) {
+              let sum = 0;
+              const startFrame = f * mergeEvery;
+              const endFrame = (f + 1) * mergeEvery;
+              // frame[mean(startFrame:endFrame), y, x, c]
+              for (let i = startFrame; i < endFrame; i++) {
+                const oriIdx = i * (height * width * 3) + y * (width * 3) + x * (3) + c;
+                sum += framesU1Array[oriIdx];
+              }
+              const saveIdx = f * (height * width * 3) + y * (width * 3) + x * (3) + c;
+              mergedFrames[saveIdx] = sum / mergeEvery;
+            }
+          }
+        }
+      }
 
-      // MergedFrames -> Diffs -> Opacity Masks
-      const masks = tf.tidy(() => {
-        const len = frames.shape[0];
-        const shiftRight = tf.concat([
-            frames.slice([0, 0, 0, 0], [1,     -1, -1, -1]),
-            frames.slice([0, 0, 0, 0], [len-1, -1, -1, -1])
-          ], 0
-        );
-        const diffs = tf.sub(frames, shiftRight).abs().pow(power).mean(3);  // -> [nFrames, height, width]
-        const maxDiff = tf.max(diffs);
-        return diffs.div(maxDiff).mul(amp).clipByValue(0, 1);
-      });
+      // mergedFrames --> Diffs
+      let diffs = new Float32Array(nFrames * height * width);
+      for (let f = 0; f < nFrames; f++) {
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            let diffSum = 0;
+            for (let c = 0; c < 3; c++) {
+              const idxThis = f * (height * width * 3) + y * (width * 3) + x * 3 + c;
+              const idxPrev = Math.max(0, f - 1) * (height * width * 3) + y * (width * 3) + x * 3 + c;
+              diffSum += Math.abs(mergedFrames[idxThis] - mergedFrames[idxPrev]);
+            }
+            const saveIdx = f * (height * width) + y * width + x;
+            diffs[saveIdx] = diffSum / 3;
+          }
+        }
+      }
 
-      // Masks -> Energies
-      const energies = tf.tidy(() => {
-        const rawEnergies = masks.sum([1, 2]);    // -> [nFrames, ]
+      // Diffs --> opacityMasks
+      let maxDiff = 0;
+      for (let i = 0; i < diffs.length; i++) {
+        maxDiff = Math.max(maxDiff, diffs[i]);
+      }
+      for (let i = 0; i < diffs.length; i++) {
+        diffs[i] = Math.min(1, Math.max(0, Math.pow(diffs[i] / maxDiff, power) * amp));
+      }
 
-        // Quantile 0.99 as threshold
-        const rawE = rawEnergies.slice([0], [nFrames]);
-        const sorted = rawE.dataSync().sort((a, b) => a - b);
-        const quantile = sorted[Math.floor(sorted.length * 0.99)];
-        const threshold = tf.scalar(quantile);
+      // opacityMasks --> Energies
+      const rawEnergies = new Float32Array(nFrames);
+      for (let f = 0; f < nFrames; f++) {
+        let sum = 0;
+        for (let y = 0; y < height; y++) {
+          for (let x = 0; x < width; x++) {
+            const idx = f * (height * width) + y * width + x;
+            sum += diffs[idx];
+          }
+        }
+        rawEnergies[f] = sum;
+      }
 
-        // Thresholding
-        const thresholded = rawEnergies.clipByValue(0, threshold.dataSync()[0]);
+      // Energies --> thresholdedEnergies (with Quantile 0.99 as threshold)
+      const sorted = rawEnergies.slice();
+      sorted.sort((a, b) => a - b);
+      const quantile = sorted[Math.floor(sorted.length * 0.99)];
+      for (let i = 0; i < nFrames; i++) {
+        rawEnergies[i] = Math.min(quantile, rawEnergies[i]);
+      }
 
-        // Gaussian smoothing
-        const sigma = smooth;
-        const kernelSize = Math.ceil(4 * sigma);
-        const center = Math.round(kernelSize / 2);
-        const smoothKernelArray = Array.from({ length: kernelSize }, (_, i) => Math.exp(-(i - center) * (i - center) / (2 * sigma * sigma)));
-        const smoothKernel = tf.tensor3d(smoothKernelArray, [kernelSize, 1, 1]);
-        const smoothen = thresholded.expandDims(1).conv1d(smoothKernel, 1, 'same').squeeze();
+      // thresholdedEnergies --> smoothenEnergies (Gaussian smoothing)
+      let energies = new Float32Array(nFrames);
+      const sigma = smooth;
+      const kernelSize = Math.ceil(4 * sigma);
+      const center = Math.round(kernelSize / 2);
+      const smoothKernelArray = Array.from({ length: kernelSize }, (_, i) => Math.exp(-(i - center) * (i - center) / (2 * sigma * sigma)));
+      for (let f = 0; f < nFrames; f++) {
+        let sum = 0;
+        for (let i = 0; i < kernelSize; i++) {
+          const idx = (f + i - center + nFrames) % nFrames;
+          sum += rawEnergies[idx] * smoothKernelArray[i];
+        }
+        energies[f] = sum;
+      }
 
-        // Normalize to [0, 1]
-        const max = tf.max(smoothen);
-        const min = tf.min(smoothen);
-        const range = max.sub(min);
-        return smoothen.sub(min).div(range);    // -> [0, 1]
-      });
+      // Normalize energies[] array to R[0, 1]
+      let maxEnergy = 0;
+      let minEnergy = 1;
+      for (let i = 0; i < nFrames; i++) {
+        maxEnergy = Math.max(maxEnergy, energies[i]);
+        minEnergy = Math.min(minEnergy, energies[i]);
+      }
+      let range = maxEnergy - minEnergy;
+      for (let i = 0; i < nFrames; i++) {
+        energies[i] = (energies[i] - minEnergy) / range;
+      }
 
-      // Cast to typed arrays for data transfer
-      const [framesData, masksData, energiesData] = await Promise.all([
-        frames.data(),
-        masks.data(),
-        energies.data(),
-      ]);
-
-      // Free up memory manually
-      frames.dispose();
-      masks.dispose();
-      energies.dispose();
-
-      // Transfer data back to main thread
-      console.log('Tensors ready', framesData, masksData, energiesData, Date.now());
+      // Transfer data back to the main thread
+      console.log('Tensors ready', mergedFrames, diffs, energies, Date.now());
       postMessage({
         type: 'TENSORS_READY',
-        frames: framesData,
-        masks: masksData,
-        energies: energiesData,
+        frames: mergedFrames,
+        masks: diffs,
+        energies: energies,
         numMergedFrames: nFrames,
       });
     }

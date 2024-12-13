@@ -81,7 +81,7 @@ const EventsFilter = ({ events, deselectedTags, setDeselectedTags }) => {
               allTags.map((tag) => (
                 <div
                   key={tag.name}
-                  className={`m-1 mb-3 px-2 py-0.5 text-sm rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700 ${tag.deselected && 'line-through text-red-400'}`}
+                  className={`m-1 mb-1 px-2 py-0.5 text-sm rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700 ${tag.deselected && 'line-through text-red-400'}`}
                   onClick={() => {
                     // Toggle shown flag
                     if (tag.deselected) {
@@ -96,10 +96,11 @@ const EventsFilter = ({ events, deselectedTags, setDeselectedTags }) => {
               ))
             }
           </div>
+          {/* Spacer */}
+          <div className="h-2"/>
         </>
       }
     </div>
-
   );
 }
 
