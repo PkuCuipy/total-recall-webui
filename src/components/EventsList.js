@@ -51,43 +51,55 @@ const EventsFilter = ({ events, deselectedTags, setDeselectedTags }) => {
   return (
     <div className="shadow-md shadow-gray-800 z-10">
       {/* Filter Header */}
-      <div className="flex justify-between items-center gap-2 mx-4">
-        <div className="flex-1 mt-2 mb-1 text-lg font-bold">
-          Event Tags Filter
-        </div>
-        <div onClick={() => setDeselectedTags([])} className="mt-2 mb-1 p-1 px-2 text-xs font-bold bg-gray-700 rounded-xl hover:bg-gray-600 cursor-pointer">
-          Select All
-        </div>
-        <div onClick={() => setDeselectedTags(allTags.map(o => o.name))} className="mt-2 mb-1 p-1 px-2 text-xs font-bold bg-red-600 rounded-xl hover:bg-red-500 cursor-pointer">
-          Clear All
-        </div>
-      </div>
-
-      {/* Divider */}
-      <div className="mb-2 mx-3 border-b-[0.5px] border-gray-700"></div>
-
-      {/* Filter Buttons */}
-      <div className="mx-4 mb-2 flex flex-wrap max-h-[6.7rem] overflow-auto">
-        {
-          allTags.map((tag) => (
-            <div
-              key={tag.name}
-              className={`m-1 px-2 py-0.5 text-sm rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700 ${tag.deselected && 'line-through text-red-400'}`}
-              onClick={() => {
-                // Toggle shown flag
-                if (tag.deselected) {
-                  setDeselectedTags(deselectedTags.filter(o => o !== tag.name));
-                } else {
-                  setDeselectedTags([...deselectedTags, tag.name]);
-                }
-              }}
-            >
-              {tag.name} ({tag.count})
+      {(allTags.length === 0)
+        ?
+        <p className="text-lg font-bold text-gray-300 p-2 px-4 bg-gray-700 m-0">
+          Events List
+        </p>
+        :
+        <>
+          <div className="flex justify-between items-center gap-2 mx-4">
+            <div className="flex-1 mt-2 mb-1 text-lg font-bold">
+              Tags Filter
             </div>
-          ))
-        }
-      </div>
+            <div
+              onClick={() => setDeselectedTags([])}
+              className="mt-2 mb-1 p-1 px-2 text-xs font-bold bg-gray-700 rounded-xl hover:bg-gray-600 cursor-pointer">
+              Select All
+            </div>
+            <div
+              onClick={() => setDeselectedTags(allTags.map(o => o.name))}
+              className="mt-2 mb-1 p-1 px-2 text-xs font-bold bg-red-600 rounded-xl hover:bg-red-500 cursor-pointer">
+              Clear All
+            </div>
+          </div>
+          {/* Divider */}
+          <div className="mb-2 mx-3 border-b-[0.5px] border-gray-700"/>
+          {/* Toggleable Tags */}
+          <div className="mx-4 flex flex-wrap max-h-[6.7rem] overflow-auto">
+            {
+              allTags.map((tag) => (
+                <div
+                  key={tag.name}
+                  className={`m-1 mb-3 px-2 py-0.5 text-sm rounded-lg bg-gray-800 cursor-pointer hover:bg-gray-700 ${tag.deselected && 'line-through text-red-400'}`}
+                  onClick={() => {
+                    // Toggle shown flag
+                    if (tag.deselected) {
+                      setDeselectedTags(deselectedTags.filter(o => o !== tag.name));
+                    } else {
+                      setDeselectedTags([...deselectedTags, tag.name]);
+                    }
+                  }}
+                >
+                  {tag.name} ({tag.count})
+                </div>
+              ))
+            }
+          </div>
+        </>
+      }
     </div>
+
   );
 }
 
@@ -221,42 +233,40 @@ const EventsList = ({ events, seekTo }) => {
   const [deselectedTags, setDeselectedTags] = useState([]);
 
   return (
-    <div
-      className="w-[25rem] text-neutral-300 rounded-xl border-2 border-gray-500 overflow-hidden flex flex-col">
-      {
-        (events.length === 0) ?
-          <div className="w-full h-full bg-gray-700 flex items-center justify-center text-gray-300">
-            Upload a video to start ➡
-          </div>
-          :
-          <>
-            <EventsFilter
-              events={events}
-              deselectedTags={deselectedTags}
-              setDeselectedTags={setDeselectedTags}
-            />
-            <div className="p-4 py-2 w-full h-full flex flex-col overflow-auto bg-gray-800 flex-1">
-              {
-                events
-                  .filter((event) => {
-                    if (event.tags.length === 0) {
-                      return true;    // Show events without objects
-                    }
-                    const isDeslected = event.tags.map(o => deselectedTags.includes(o));
-                    const isAllDeselected = isDeslected.reduce((a, b) => a && b, true);
-                    return isAllDeselected === false;
-                  })
-                  .map((event, idx) => (
-                    <EventBlock
-                      key={idx}
-                      event={event}
-                      seekTo={seekTo}
-                    />
-                  ))
-              }
-            </div>
-          </>
-      }
+    <div className="w-[25rem] text-neutral-300 rounded-xl border-2 border-gray-500 overflow-hidden flex flex-col">
+      <>
+        <EventsFilter
+          events={events}
+          deselectedTags={deselectedTags}
+          setDeselectedTags={setDeselectedTags}
+        />
+        <div className="p-4 py-2 w-full h-full flex flex-col overflow-auto bg-gray-800 flex-1">
+          {
+            (events.length === 0) ?
+              <div className="w-full h-full flex items-center justify-center text-gray-300">
+                No events found yet
+              </div>
+              :
+              events
+                .filter((event) => {
+                  if (event.tags.length === 0) {
+                    return true;    // Show events without objects
+                  }
+                  const isDeslected = event.tags.map(o => deselectedTags.includes(o));
+                  const isAllDeselected = isDeslected.reduce((a, b) => a && b, true);
+                  return isAllDeselected === false;
+                })
+                .map((event, idx) => (
+                  <EventBlock
+                    key={idx}
+                    event={event}
+                    seekTo={seekTo}
+                  />
+                ))
+          }
+        </div>
+      </>
+
     </div>
   );
 }

@@ -5,7 +5,7 @@ const plottingWorkerCode = () => {
   onmessage = async (e) => {
 
     const { type, data } = e.data;
-    console.warn('PlottingWorker is called with params:', type, data);
+    console.warn('PlottingWorker is called with params:', type, data, Date.now());
 
     if (type === 'MAKE_3D_VIEW') {
       const {frames, masks, height, width} = data;
@@ -31,7 +31,7 @@ const plottingWorkerCode = () => {
         }
       }
       const canvasU1 = Uint8Array.from(canvasF32.map((val) => Math.floor(val))); // to uint8 0-255
-      // console.log('View3D Graph ready', canvasU1);
+      console.log('View3D Graph ready', canvasU1, Date.now());
       postMessage({
         type: '3D_VIEW_GRAPH_READY',
         data: {

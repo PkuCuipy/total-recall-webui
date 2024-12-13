@@ -21,7 +21,7 @@ const extractFrameAsURL = async (ffmpeg, inputVideoName, timeInSeconds, targetHe
 
 
 // Extract a video clip
-const extractVideoClipBlob = async (ffmpeg, inputVideoName, startTime, endTime, eventIndex) => {
+const extractVideoClipAsBlob = async (ffmpeg, inputVideoName, startTime, endTime, eventIndex) => {
   const outputName = `event_${eventIndex}.mp4`;
   try {
     await ffmpeg.exec([
@@ -75,7 +75,7 @@ const fetchEventDetails = async (videoBlob, eventIndex) => {
 // Process single event and update state
 const processEvent = async (event, eventID, ffmpeg, inputVideoName, updateEvent) => {
   try {
-    const videoBlob = await extractVideoClipBlob(
+    const videoBlob = await extractVideoClipAsBlob(
       ffmpeg,
       inputVideoName,
       event.startTime,

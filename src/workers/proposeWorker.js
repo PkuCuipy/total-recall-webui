@@ -14,7 +14,7 @@ const proposeWorkerCode = () => {
     *   }
     * */
 
-    console.warn('ProposeWorker is called');
+    console.warn('ProposeWorker is called', Date.now());
 
     const { energies, totalSeconds, minSeconds, paddingSeconds, maxGap, maxNumEvents, minEnergy } = e.data;
     const nFrames = energies.length;
@@ -93,6 +93,7 @@ const proposeWorkerCode = () => {
     }));
 
     // console.log('Events ready', events);
+    console.warn('Proposed events are ready', Date.now());
     postMessage({
       type: 'PROPOSED_EVENTS_READY',
       data: {

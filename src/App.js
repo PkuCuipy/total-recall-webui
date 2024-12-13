@@ -33,7 +33,7 @@ function App() {
   const [currentSecond, setCurrentSecond] = useState(0);
   const [loadingProgress, setLoadingProgress] = useState(0);
 
-  // Video metadata to be determined
+  // Video metadata (to be determined)
   const totalSeconds = useRef(undefined);
   const oriVideoW = useRef(undefined);
   const oriVideoH = useRef(undefined);
@@ -45,12 +45,11 @@ function App() {
   const togglePlayRef = useRef(null);
 
   // Workers
-  const ffmpegRef = useRef(new FFmpeg());   // not sure if this will cause memory leak
+  const ffmpegRef = useRef(new FFmpeg());
   const tensorWorkerRef = useRef(null);
   const plottingWorkerRef = useRef(null);
   const proposeWorkerRef = useRef(null);
   useEffect(() => {
-    // ffmpegRef.current = new FFmpeg();
     tensorWorkerRef.current = new Worker(tensorWorkerURL);
     plottingWorkerRef.current = new Worker(plottingWorkerURL);
     proposeWorkerRef.current = new Worker(proposeWorkerURL);
@@ -66,7 +65,8 @@ function App() {
 
     // Set FFMpeg Output Callback (useful for progress bar and video metadata)
     ffmpeg.on('log', ({message}) => {
-      console.log(message);  // Log all FFMpeg messages
+      // Log all FFMpeg messages
+      console.log(message);
 
       // Get and set video duration in seconds
       const durationMatch = message.match(/Duration: (\d{2}):(\d{2}):(\d{2}.\d{2})/);
@@ -97,7 +97,7 @@ function App() {
       }
     });
 
-    // Load FFMpeg Core
+    // Load FFMpeg Core   // TODO: use local files
     const baseURL = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd'
     await ffmpeg.load({
       coreURL: await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript'),
@@ -237,7 +237,6 @@ function App() {
 
         const imageData = new ImageData(graphWidth, graphHeight);
         const numPixels = graph.length / 3;
-        console.log(graph.length)
         for (let i = 0; i < numPixels; i++) {
           imageData.data[i * 4] = graph[i * 3];         // R
           imageData.data[i * 4 + 1] = graph[i * 3 + 1]; // G
@@ -395,12 +394,20 @@ function App() {
         {/* Loading Placeholder */}
         {(loadingProgress < 99.9) && (
           (loadingProgress === 0) ? (
-              <div className="absolute top-0 left-0 w-full h-full bg-gray-700 flex justify-center items-center z-20 text-gray-300">
-                Upload a Video to Start ↗
+              <div
+                className="absolute top-0 left-0 w-full h-full bg-gray-800 flex flex-col justify-center items-center z-20 text-gray-300">
+                <div className="absolute top-0 left-0 w-full bg-gray-700 text-lg font-bold text-gray-300 p-2 px-4">
+                  Timeline
+                </div>
+                <p className="h-6"/>
+                <p>
+                  Upload a Video to Start ↗
+                </p>
               </div>
             ) :
             (
-              <div className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
+              <div
+                className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
                 Loading Video: {loadingProgress}%
                 <div className="w-40 h-2 bg-gray-500 rounded-lg ml-2">
                   <div className="h-full bg-blue-500 rounded-lg" style={{ width: `${loadingProgress}%` }}/>

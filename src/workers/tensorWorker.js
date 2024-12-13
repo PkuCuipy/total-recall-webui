@@ -8,7 +8,7 @@ const tensorWorkerCode = () => {
   importScripts('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js');
 
   onmessage = async (e) => {
-    console.warn('TensorWorker is called');
+    console.warn('TensorWorker is called', Date.now());
     const { type, data } = e.data;
 
     if (type === 'CONVERT_FRAMES') {
@@ -88,7 +88,7 @@ const tensorWorkerCode = () => {
       energies.dispose();
 
       // Transfer data back to main thread
-      // console.log('Tensors ready', framesData, masksData, energiesData);
+      console.log('Tensors ready', framesData, masksData, energiesData, Date.now());
       postMessage({
         type: 'TENSORS_READY',
         frames: framesData,
