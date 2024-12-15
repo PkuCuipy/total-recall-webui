@@ -71,15 +71,16 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
                 />
               </span>
 
-              {/* Link to GitHub Repo */}
+              {/* Link to Frontend GitHub Repo */}
               <span className="text-2xl cursor-pointer ml-3 p-[5px] bg-gray-800 rounded-full hover:bg-gray-900 hover:ring-2 hover:ring-gray-500"
-                onClick={() => {window.open('https://github.com/roast-my-resume/TotalRecall', '_blank');}}>
+                onClick={() => {window.open('https://github.com/PkuCuipy/total-recall-webui', '_blank');}}>
                 <GithubIcon/>
               </span>
 
-              {/* Link to Help Page */}
-              <span className="text-2xl cursor-pointer ml-3 p-[5px] bg-gray-800 rounded-full hover:bg-gray-900 hover:ring-2 hover:ring-gray-500"
+              {/* Link to Backend GitHub Repo */}
+              <span className="text-2xl cursor-pointer ml-3 p-[5px] bg-gray-800 rounded-full hover:bg-gray-900 hover:ring-2 hover:ring-gray-500 flex items-center"
                 onClick={() => {window.open('https://github.com/roast-my-resume/TotalRecall', '_blank');}}>
+                <span className="text-sm mx-1">Backend</span>
                 <HelpIcon/>
               </span>
             </div>
@@ -102,11 +103,6 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
         (
           <div className="w-full h-full flex flex-col">
             <div className="flex flex-wrap gap-2 text-lg font-bold text-gray-300 p-2 px-4 bg-gray-900 border-b-2 border-gray-700 border-opacity-30">
-              <span>Monitor</span>
-
-              {/* Spacer */}
-              <span className="flex-1"/>
-
               {/* New Video by Refreshing Page */}
               <button
                 className="bg-blue-500 text-white text-sm px-3 py-1 rounded-full cursor-pointer hover:bg-blue-600"
@@ -120,7 +116,7 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
               </button>
 
               {/* OpenAI API Key Input Field */}
-              <span className="bg-emerald-600 text-white text-xs pl-3 pr-1 py-1 rounded-full flex items-center">
+              <span className="bg-emerald-600 text-white text-sm pl-3 pr-1 py-1 rounded-full flex items-center">
                 OpenAI API Key:
                 <input
                   type="text"
@@ -141,6 +137,22 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
               >
                 🔍 Re-Analyze
               </button>
+
+              {/* Spacer */}
+              <span className="flex-1"/>
+
+              {/* Link to Frontend GitHub Repo */}
+              <span className="text-2xl cursor-pointer p-[5px] bg-gray-800 rounded-full hover:bg-gray-900 ring-2 ring-gray-500 hover:ring-gray-400"
+                onClick={() => {window.open('https://github.com/PkuCuipy/total-recall-webui', '_blank');}}>
+                <GithubIcon/>
+              </span>
+
+              {/* Link to Backend GitHub Repo */}
+              <span className="flex items-center text-2xl cursor-pointer p-[5px] bg-gray-800 rounded-full hover:bg-gray-900 ring-2 ring-gray-500 hover:ring-gray-400"
+                onClick={() => {window.open('https://github.com/roast-my-resume/TotalRecall', '_blank');}}>
+                <span className="text-sm mx-1">Backend</span>
+                <HelpIcon/>
+              </span>
             </div>
 
             {/* Video Player */}
