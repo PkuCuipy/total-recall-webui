@@ -84,12 +84,13 @@ const proposeWorkerCode = () => {
 
     // Append default values for events
     events = events.map(({ startTime, endTime }, idx) => ({
+      eventID: idx,
       type: '⋯',
       title: `Event ${idx + 1}`,
       description: '',
       startTime: startTime,
       endTime: endTime,
-      tags: ["No tags"],
+      tags: [],
     }));
 
     // console.log('Events ready', events);

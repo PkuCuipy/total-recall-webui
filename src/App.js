@@ -9,41 +9,44 @@ import proposeWorkerURL from "./workers/proposeWorker";
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 
-import { processEvents } from './utils/processEvents';
+import { analyzeAllEvents } from './utils/analyzeAllEvents';
 
 
 // Constants
-const smooth = 5.0;
-const maxGap = 10;
+const maxGapBetweenEvents = 10;
 const maxNumEvents = 30;
-const paddingSeconds = 1;
-const minSeconds = paddingSeconds;
-const downsampledFPS = 1;
-const mergeEverySeconds = 1;
+const eventPaddingSeconds = 1;
+const minEventSeconds = eventPaddingSeconds;
+const minEventEnergy = 0.1;
+const downsampledFPS = 2;
+const mergeEverySeconds = 0.5;
 const [resizedW, resizedH] = [80, 80];
-const chunkSize = 7000000;
+const chunkSize = 7000000; // TODO: chunked processing to avoid OOM
+const smooth = 5.0;
+const amplify = 5.0;       // TODO: Make it Adjustable
+const power = 2.0;         // TODO: Make it Adjustable
 
 
 function App() {
 
   const [videoUrl, setVideoUrl] = useState(null);
   const [ffmpegLoaded, setFfmpegLoaded] = useState(false);
-  const [events, setEvents] = useState([]);
+  const [videoLoadingProgress, setVideoLoadingProgress] = useState(0);
   const [cursorPosSeconds, setCursorPosSeconds] = useState(null);
+  const [playbackPosSecond, setPlaybackPosSecond] = useState(0);
+  const [events, setEvents] = useState([]);
   const [highlightedEvent, setHighlightedEvent] = useState(null);
-  const [currentSecond, setCurrentSecond] = useState(0);
-  const [loadingProgress, setLoadingProgress] = useState(0);
 
   // Video metadata (to be determined)
-  const totalSeconds = useRef(undefined);
+  const videoTotalSeconds = useRef(undefined);
   const oriVideoW = useRef(undefined);
   const oriVideoH = useRef(undefined);
   const oriVideoFps = useRef(undefined);
-  const numMergedFrames = useRef(undefined);
+  const numFrames = useRef(undefined);
 
   // Store the function to seek to a specific time
   const seekToRef = useRef(null);
-  const togglePlayRef = useRef(null);
+  const togglePlayPauseRef = useRef(null);
 
   // Workers
   const ffmpegRef = useRef(new FFmpeg());
@@ -56,10 +59,6 @@ function App() {
     proposeWorkerRef.current = new Worker(proposeWorkerURL);
   }, []);
 
-  // Adjustable Parameters
-  const amplify = 5.0;
-  const power = 2.0;
-
   // Load FFMpeg
   const loadFfmpeg = async () => {
     const ffmpeg = ffmpegRef.current;
@@ -71,11 +70,11 @@ function App() {
 
       // Get and set video duration in seconds
       const durationMatch = message.match(/Duration: (\d{2}):(\d{2}):(\d{2}.\d{2})/);
-      if (durationMatch && totalSeconds.current === undefined) {
+      if (durationMatch && videoTotalSeconds.current === undefined) {
         const hours = parseInt(durationMatch[1]);
         const minutes = parseInt(durationMatch[2]);
         const seconds = parseFloat(durationMatch[3]);
-        totalSeconds.current = hours * 3600 + minutes * 60 + seconds;
+        videoTotalSeconds.current = hours * 3600 + minutes * 60 + seconds;
       }
 
       // Get video dimensions and FPS
@@ -88,13 +87,13 @@ function App() {
 
       // Progress Bar
       const progressMatch = message.match(/time=(\d{2}):(\d{2}):(\d{2}.\d{2})/);
-      if (progressMatch && totalSeconds.current !== undefined) {
+      if (progressMatch && videoTotalSeconds.current !== undefined) {
         const hours = parseInt(progressMatch[1]);
         const minutes = parseInt(progressMatch[2]);
         const seconds = parseFloat(progressMatch[3]);
         const currentTime = hours * 3600 + minutes * 60 + seconds;
-        const percent = Math.round(currentTime / totalSeconds.current * 1000) / 10;
-        setLoadingProgress(percent);
+        const percent = Math.round(currentTime / videoTotalSeconds.current * 1000) / 10;
+        setVideoLoadingProgress(percent);
       }
     });
 
@@ -113,33 +112,13 @@ function App() {
   }, []);
 
 
-  // Convert Video URL to Uint8Array
-  //   Input: videoURL
-  //   Return: Uint8Array
+
   const videoURLToU1Array = async (videoURL) => {
-
-    // const ffmpeg = ffmpegRef.current;
-    // await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
-    // await ffmpeg.exec([
-    //   '-i', 'input.mp4',
-    //   '-vf', `scale=${resizedW}:${resizedH},format=rgb24`,
-    //   '-f', 'rawvideo',     // Extract to raw video format
-    //   '-pix_fmt', 'rgb24',
-    //   'output.raw'
-    // ]);
-    // const frameData = await ffmpeg.readFile('output.raw');    // -> Uint8Array
-
-    // const ffmpeg = ffmpegRef.current;
-    // await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
-    // await ffmpeg.exec([
-    //   '-i', 'input.mp4',
-    //   '-vf', `tmix=frames=10:weights='1 1 1 1 1 1 1 1 1 1',scale=${resizedW}:${resizedH},format=rgb24`, // Blend 10 frames
-    //   '-f', 'rawvideo',
-    //   '-pix_fmt', 'rgb24',
-    //   'output.raw'
-    // ]);
-    // const frameData = await ffmpeg.readFile('output.raw');
-
+    /*
+      Convert Video URL to Uint8Array
+      - Param: videoURL (String)
+      - Return: Video (Uint8Array)
+    */
     const ffmpeg = ffmpegRef.current;
     await ffmpeg.writeFile('input.mp4', await fetchFile(videoURL));
     await ffmpeg.exec([
@@ -181,7 +160,6 @@ function App() {
           type: 'CONVERT_FRAMES',
           data: {
             framesU1Array: u1arr,
-            mergeEvery: Math.ceil(downsampledFPS * mergeEverySeconds),   // e.g. merge every 0.3s for a 30fps video means merge every 9 frames
             height: resizedH,
             width: resizedW,
             amp: amplify,
@@ -200,7 +178,7 @@ function App() {
     tensorWorkerRef.current.onmessage = (e) => {
       console.log("[Main]: Received from TensorWorker", e.data);
       const {frames, masks, energies } = e.data;
-      numMergedFrames.current = e.data.numMergedFrames;
+      numFrames.current = e.data.frames.length / (resizedH * resizedW * 3);
 
       // Make 3D View Graph
       plottingWorkerRef.current.postMessage({
@@ -234,12 +212,12 @@ function App() {
       // Propose Events
       proposeWorkerRef.current.postMessage({
         energies: energies,
-        totalSeconds: totalSeconds.current,
-        minSeconds: minSeconds,
-        paddingSeconds: paddingSeconds,
+        totalSeconds: videoTotalSeconds.current,
+        minSeconds: minEventSeconds,
+        paddingSeconds: eventPaddingSeconds,
         maxNumEvents: maxNumEvents,
-        minEnergy: 0.1,
-        maxGap: maxGap,
+        minEnergy: minEventEnergy,
+        maxGap: maxGapBetweenEvents,
       });
     };
 
@@ -316,7 +294,7 @@ function App() {
         const proposedEvents = data.events;
         setEvents(proposedEvents);
         const eventsGraphDiv = document.getElementById("events-graph");
-        eventsGraphDiv.style.width = `${numMergedFrames.current + resizedW - 1}px`;
+        eventsGraphDiv.style.width = `${numFrames.current + resizedW - 1}px`;
 
         // Function to update a single event
         const updateEvent = (index, updatedEvent) => {
@@ -326,7 +304,7 @@ function App() {
         };
 
         // Start processing events
-        processEvents(proposedEvents, ffmpegRef.current, 'input.mp4', updateEvent);
+        analyzeAllEvents(proposedEvents, ffmpegRef.current, 'input.mp4', updateEvent);
       } else {
         console.error("Unknown ProposeWorker message", e.data);
       }
@@ -367,7 +345,7 @@ function App() {
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === ' ') {
-        togglePlayRef.current && togglePlayRef.current();
+        togglePlayPauseRef.current && togglePlayPauseRef.current();
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -378,7 +356,7 @@ function App() {
 
 
   return (
-    <div className="h-dvh flex flex-col bg-gray-900 max-w-screen-xl mx-auto select-none">
+    <div className="h-dvh flex flex-col bg-gray-900 max-w-screen-xl mx-auto select-none cursor-default">
 
       {/* Serve as background */}
       <div className="absolute top-0 left-0 w-full h-full bg-gray-900 -z-10"/>
@@ -392,7 +370,7 @@ function App() {
               // 1. Seek to the specified time
               seekToRef.current(sec);
               // 2. Scroll to the current playback position
-              const pos = sec / totalSeconds.current * numMergedFrames.current + resizedW / 2;
+              const pos = sec / videoTotalSeconds.current * numFrames.current + resizedW / 2;
               const leftPadding = 100;
               const scrollToPos = Math.max(0, pos - leftPadding);
               const graphsContainer = document.getElementById("graphs-container");
@@ -404,16 +382,23 @@ function App() {
           videoUrl={videoUrl}
           setVideoUrl={setVideoUrl}
           seekToRef={seekToRef}
-          togglePlayRef={togglePlayRef}
-          setCurrentSecond={setCurrentSecond}
+          togglePlayRef={togglePlayPauseRef}
+          setCurrentSecond={setPlaybackPosSecond}
+          onReAnalyze={() => {
+            analyzeAllEvents(events, ffmpegRef.current, 'input.mp4', (index, updatedEvent) => {
+              setEvents(currentEvents =>
+                currentEvents.map((event, i) => i === index ? updatedEvent : event)
+              );
+            });
+          }}
         />
       </div>
       {/* Lower Part */}
       <div className="min-w-[48rem] bg-gray-800 flex flex-row m-4 rounded-xl border-2 border-gray-500 overflow-hidden relative">
 
         {/* Loading Placeholder */}
-        {(loadingProgress < 99.9) && (
-          (loadingProgress === 0) ? (
+        {(videoLoadingProgress < 99.9) && (
+          (videoLoadingProgress === 0) ? (
               <div
                 className="absolute top-0 left-0 w-full h-full bg-gray-800 flex flex-col justify-center items-center z-20 text-gray-300">
                 <div className="absolute top-0 left-0 w-full bg-gray-700 text-lg font-bold text-gray-300 p-2 px-4">
@@ -428,9 +413,9 @@ function App() {
             (
               <div
                 className="absolute top-0 left-0 w-full h-full bg-gray-800 border-2 rounded-lg border-gray-700 flex justify-center items-center z-20 text-gray-300">
-                Loading Video: {loadingProgress}%
+                Loading Video: {videoLoadingProgress}%
                 <div className="w-40 h-2 bg-gray-500 rounded-lg ml-2">
-                  <div className="h-full bg-blue-500 rounded-lg" style={{ width: `${loadingProgress}%` }}/>
+                  <div className="h-full bg-blue-500 rounded-lg" style={{ width: `${videoLoadingProgress}%` }}/>
                 </div>
               </div>
             )
@@ -462,8 +447,8 @@ function App() {
             onMouseMove={(e) => {   // Handle cursor movement in timeline
               const rect = e.currentTarget.getBoundingClientRect();
               const x = e.clientX - rect.left;
-              const totalSec = totalSeconds.current;
-              const totalWidth = numMergedFrames.current;
+              const totalSec = videoTotalSeconds.current;
+              const totalWidth = numFrames.current;
               const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
               setCursorPosSeconds(currentCursorSec);
               // Also seek to the cursor position if left mouse button is pressed
@@ -479,8 +464,8 @@ function App() {
             onMouseDown={(e) => {
               const rect = e.currentTarget.getBoundingClientRect();
               const x = e.clientX - rect.left;
-              const totalSec = totalSeconds.current;
-              const totalWidth = numMergedFrames.current;
+              const totalSec = videoTotalSeconds.current;
+              const totalWidth = numFrames.current;
               const currentCursorSec = totalSec * (x - resizedW / 2) / totalWidth;
               setCursorPosSeconds(currentCursorSec);
               if (seekToRef.current) {
@@ -497,8 +482,8 @@ function App() {
                 <>
                   { // 1. Tags of Events
                     events?.map((event, idx) => {
-                      const totalSec = totalSeconds.current;
-                      const totalWidth = numMergedFrames.current;
+                      const totalSec = videoTotalSeconds.current;
+                      const totalWidth = numFrames.current;
                       const middle = Math.round((event.startTime + event.endTime) / 2 / totalSec * totalWidth) + resizedW / 2;
                       const left = middle - 25;
                       return (
@@ -517,18 +502,18 @@ function App() {
                   }
                   { // 2. Period of the Highlighted Event
                     (highlightedEvent !== null) && (() => {
-                      const totalSec = totalSeconds.current;
-                      const totalWidth = numMergedFrames.current;
+                      const totalSec = videoTotalSeconds.current;
+                      const totalWidth = numFrames.current;
                       const left = Math.round(highlightedEvent.startTime / totalSec * totalWidth) + resizedW / 2;
                       const right = Math.round(highlightedEvent.endTime / totalSec * totalWidth) + resizedW / 2;
                       const width = right - left;
                       return (
                         <>
                           <div key="highlighted-in-energy-graph"
-                               className="absolute top-[82px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                               className="absolute top-[82px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none cursor-default"
                                style={{ left: `${left}px`, width: `${width}px` }}/>
                           <div key="highlighted-in-3d-view-graph"
-                               className="absolute top-[246px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none"
+                               className="absolute top-[246px] h-[80px] rounded border-2 border-white border-opacity-50 bg-white bg-opacity-20 flex justify-center items-center select-none cursor-default"
                                style={{ left: `${left - resizedW / 2}px`, width: `${width + resizedW}px` }}/>
                         </>
 
@@ -536,10 +521,10 @@ function App() {
                     })()
                   }
                   { // 3. Current Playback Position Indicator
-                    (currentSecond !== undefined) && (() => {
-                      const totalSec = totalSeconds.current;
-                      const totalWidth = numMergedFrames.current;
-                      const left = Math.round(currentSecond / totalSec * totalWidth + resizedW / 2);
+                    (playbackPosSecond !== undefined) && (() => {
+                      const totalSec = videoTotalSeconds.current;
+                      const totalWidth = numFrames.current;
+                      const left = Math.round(playbackPosSecond / totalSec * totalWidth + resizedW / 2);
                       return (
                         <>
                           <div
@@ -558,8 +543,8 @@ function App() {
                   }
                   { // 4. Cursor Position Indicator
                     (cursorPosSeconds !== null) && (highlightedEvent === null) && (() => {
-                      const totalSec = totalSeconds.current;
-                      const totalWidth = numMergedFrames.current;
+                      const totalSec = videoTotalSeconds.current;
+                      const totalWidth = numFrames.current;
                       const left = Math.round(cursorPosSeconds / totalSec * totalWidth + resizedW / 2);
                       return (
                         <>

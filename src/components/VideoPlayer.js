@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
+import { GithubIcon, HelpIcon } from "./Icons";
 
-const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurrentSecond }) => {
+const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurrentSecond, onReAnalyze }) => {
 
   const videoRef = useRef(null);
 
@@ -52,13 +53,42 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
       {!videoUrl ?
         (
           <div className="flex flex-col w-full h-full">
-            <div className="text-lg font-bold text-gray-300 p-2 px-4 bg-gray-700">
-              Monitor
+            <div className="flex items-center text-lg font-bold text-gray-300 p-2 px-4 bg-gray-700">
+              <span>Monitor</span>
+
+              {/* Spacer */}
+              <span className="flex-1"/>
+
+              {/* OpenAI API Key Input Field */}
+              <span className="bg-gray-800 h-8 text-white text-sm px-3 pr-1.5 py-1 rounded-full flex items-center">
+                OpenAI API Key:
+                <input
+                  type="text"
+                  className="bg-gray-600 text-gray-300 px-2 py-0 rounded-full ml-2 outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Paste here"
+                  defaultValue={ localStorage.getItem('openai-api-key') }
+                  onChange={(e) => { localStorage.setItem('openai-api-key', e.target.value); }}
+                />
+              </span>
+
+              {/* Link to GitHub Repo */}
+              <span className="text-2xl cursor-pointer ml-3 p-[5px] bg-gray-800 rounded-full hover:bg-gray-900 hover:ring-2 hover:ring-gray-500"
+                onClick={() => {window.open('https://github.com/roast-my-resume/TotalRecall', '_blank');}}>
+                <GithubIcon/>
+              </span>
+
+              {/* Link to Help Page */}
+              <span className="text-2xl cursor-pointer ml-3 p-[5px] bg-gray-800 rounded-full hover:bg-gray-900 hover:ring-2 hover:ring-gray-500"
+                onClick={() => {window.open('https://github.com/roast-my-resume/TotalRecall', '_blank');}}>
+                <HelpIcon/>
+              </span>
             </div>
+
+            {/* Video Uploader */}
             <div className="text-center p-8 w-full h-full bg-gray-800 flex flex-col justify-center items-center">
               <p className="text-gray-300 mb-4">Upload Video</p>
               <label className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600 w-32">
-                Choose File
+              Choose File
                 <input
                   type="file"
                   accept="video/*"
@@ -70,14 +100,59 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
           </div>
         ) :
         (
-          <video
-            className="object-fit h-full w-full"
-            ref={videoRef}
-            src={videoUrl}
-            onTimeUpdate={handleTimeUpdate}
-            controls={true}
-            autoPlay={true}
-          />
+          <div className="w-full h-full flex flex-col">
+            <div className="flex flex-wrap gap-2 text-lg font-bold text-gray-300 p-2 px-4 bg-gray-900 border-b-2 border-gray-700 border-opacity-30">
+              <span>Monitor</span>
+
+              {/* Spacer */}
+              <span className="flex-1"/>
+
+              {/* New Video by Refreshing Page */}
+              <button
+                className="bg-blue-500 text-white text-sm px-3 py-1 rounded-full cursor-pointer hover:bg-blue-600"
+                onClick={() => {
+                  if (window.confirm("Are you sure to start over with a new video?")) {
+                    window.location.reload();
+                  }
+                }}
+              >
+                ↺ New Video
+              </button>
+
+              {/* OpenAI API Key Input Field */}
+              <span className="bg-emerald-600 text-white text-xs pl-3 pr-1 py-1 rounded-full flex items-center">
+                OpenAI API Key:
+                <input
+                  type="text"
+                  className="bg-emerald-900 text-gray-300 px-1 py-0.5 rounded ml-1 mr-2 w-28"
+                  placeholder="Paste here"
+                  defaultValue={localStorage.getItem('openai-api-key')}
+                  onChange={(e) => {
+                    const key = e.target.value;
+                    localStorage.setItem('openai-api-key', key);
+                  }}
+                />
+              </span>
+
+              {/* Re-Analyze Button */}
+              <button
+                className="bg-orange-700 text-white text-sm px-3 py-1 rounded-full cursor-pointer hover:bg-orange-800"
+                onClick={onReAnalyze}
+              >
+                🔍 Re-Analyze
+              </button>
+            </div>
+
+            {/* Video Player */}
+            <video
+              className="object-fit flex-1 min-h-0 w-full"
+              ref={videoRef}
+              src={videoUrl}
+              onTimeUpdate={handleTimeUpdate}
+              controls={true}
+              autoPlay={true}
+            />
+          </div>
         )
       }
     </div>

@@ -7,38 +7,16 @@ const tensorWorkerCode = () => {
     const { type, data } = e.data;
 
     if (type === 'CONVERT_FRAMES') {
-      const { framesU1Array, mergeEvery, height, width, amp, power, smooth} = data;
+      const { framesU1Array, height, width, amp, power, smooth} = data;
 
-      const nFramesOri = framesU1Array.length / (height * width * 3);
-      const nFrames = Math.floor(nFramesOri / mergeEvery);
+      const nFrames = framesU1Array.length / (height * width * 3);
 
       /*
        *  Pipeline:
-       *  framesU1Array -> mergedFrames -> Diffs -> opacityMasks -> Energies
+       *  framesU1Array -> Diffs -> opacityMasks -> Energies
       */
 
-      // framesU1Array --> mergedFrames
-      const mergedFrames = new Float32Array(nFrames * height * width * 3);
-      for (let f = 0; f < nFrames; f++) {
-        for (let y = 0; y < height; y++) {
-          for (let x = 0; x < width; x++) {
-            for (let c = 0; c < 3; c++) {
-              let sum = 0;
-              const startFrame = f * mergeEvery;
-              const endFrame = (f + 1) * mergeEvery;
-              // frame[mean(startFrame:endFrame), y, x, c]
-              for (let i = startFrame; i < endFrame; i++) {
-                const oriIdx = i * (height * width * 3) + y * (width * 3) + x * (3) + c;
-                sum += framesU1Array[oriIdx];
-              }
-              const saveIdx = f * (height * width * 3) + y * (width * 3) + x * (3) + c;
-              mergedFrames[saveIdx] = sum / mergeEvery;
-            }
-          }
-        }
-      }
-
-      // mergedFrames --> Diffs
+      // framesU1Array --> Diffs
       let diffs = new Float32Array(nFrames * height * width);
       for (let f = 0; f < nFrames; f++) {
         for (let y = 0; y < height; y++) {
@@ -47,7 +25,7 @@ const tensorWorkerCode = () => {
             for (let c = 0; c < 3; c++) {
               const idxThis = f * (height * width * 3) + y * (width * 3) + x * 3 + c;
               const idxPrev = Math.max(0, f - 1) * (height * width * 3) + y * (width * 3) + x * 3 + c;
-              diffSum += Math.abs(mergedFrames[idxThis] - mergedFrames[idxPrev]);
+              diffSum += Math.abs(framesU1Array[idxThis] - framesU1Array[idxPrev]);
             }
             const saveIdx = f * (height * width) + y * width + x;
             diffs[saveIdx] = diffSum / 3;
@@ -113,13 +91,12 @@ const tensorWorkerCode = () => {
       }
 
       // Transfer data back to the main thread
-      console.log('Tensors ready', mergedFrames, diffs, energies, Date.now());
+      console.log('Tensors ready', diffs, energies, Date.now());
       postMessage({
         type: 'TENSORS_READY',
-        frames: mergedFrames,
+        frames: framesU1Array,
         masks: diffs,
         energies: energies,
-        numMergedFrames: nFrames,
       });
     }
 
