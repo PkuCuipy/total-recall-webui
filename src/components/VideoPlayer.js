@@ -13,6 +13,12 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
     }
   };
 
+  const handleDemoVideo = () => {
+    // Load the demo video from public folder
+    const demoVideoUrl = process.env.PUBLIC_URL + '/video.mp4';
+    setVideoUrl(demoVideoUrl);
+  };
+
   seekToRef.current = (timeInSeconds) => {
     if (videoRef.current && !isNaN(timeInSeconds)) {
       videoRef.current.currentTime = timeInSeconds;
@@ -87,9 +93,9 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
 
             {/* Video Uploader */}
             <div className="text-center p-8 w-full h-full bg-gray-800 flex flex-col justify-center items-center">
-              <p className="text-gray-300 mb-4">Upload Video</p>
-              <label className="bg-blue-500 text-white px-4 py-2 rounded cursor-pointer hover:bg-blue-600 w-32">
-              Choose File
+              {/* Upload Video Button */}
+              <label className="bg-blue-500 text-white px-6 py-3 rounded-lg cursor-pointer hover:bg-blue-600 text-base font-medium">
+                Upload Video
                 <input
                   type="file"
                   accept="video/*"
@@ -97,6 +103,21 @@ const VideoPlayer = ({ setVideoUrl, videoUrl, seekToRef, togglePlayRef, setCurre
                   onChange={handleFileSelect}
                 />
               </label>
+
+              {/* OR Divider */}
+              <div className="flex items-center w-64 my-4">
+                <div className="flex-1 border-t border-gray-600"></div>
+                <span className="px-4 text-gray-400 text-lg">or</span>
+                <div className="flex-1 border-t border-gray-600"></div>
+              </div>
+
+              {/* Try Demo Video Button */}
+              <button 
+                className="bg-green-600 text-white px-6 py-3 rounded-lg cursor-pointer hover:bg-green-700 text-base font-medium"
+                onClick={handleDemoVideo}
+              >
+                Try Demo Video
+              </button>
             </div>
           </div>
         ) :
